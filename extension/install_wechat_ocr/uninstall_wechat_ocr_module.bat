@@ -2,7 +2,8 @@
 echo Loading extension, please stand by.
 echo.
 
-cd /d %~dp0
+cd /d "%~dp0"
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 chcp 65001
 
 :start_install
@@ -28,14 +29,15 @@ goto start_install
 
 @REM -------------------------------------------------
 :uninstall_module
-poetry run pip uninstall wechat-ocr
+cd /d "%~dp0\..\.."
+uv pip uninstall --python ".venv" wechat-ocr
+cd /d "%~dp0"
 goto :finish
 
 
 @REM -------------------------------------------------
 :finish
-for /F "tokens=* USEBACKQ" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
-python _uninstall.py
+uv run --locked python _uninstall.py
 echo.
 echo   The uninstallation script has been completed. 已执行完卸载脚本。
 echo.

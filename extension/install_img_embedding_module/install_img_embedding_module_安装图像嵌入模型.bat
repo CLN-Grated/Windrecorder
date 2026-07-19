@@ -2,8 +2,8 @@
 echo Loading extension, please stand by.
 echo.
 
-cd /d %~dp0
-for /F "tokens=* USEBACKQ" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
+cd /d "%~dp0"
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 chcp 65001
 
 :start_install
@@ -35,7 +35,14 @@ goto start_install
 
 @REM -------------------------------------------------
 :install_module
-poetry run pip install -i https://pypi.tuna.tsinghua.edu.cn/simple uform
+cd /d "%~dp0\..\.."
+uv sync --locked --inexact --extra img-embedding
+if errorlevel 1 (
+    echo [ERROR] Failed to install img-embedding extra. Please update the app first.
+    pause
+    exit /b 1
+)
+cd /d "%~dp0"
 goto :finish
 
 
@@ -44,7 +51,7 @@ goto :finish
 echo.
 echo   checking the installation results... 检查安装结果……
 echo.
-python _test_install.py
+uv run --locked python _test_install.py
 echo.
 echo   The installation script has been completed. 已执行完安装脚本。
 echo.

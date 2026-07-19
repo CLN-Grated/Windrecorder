@@ -8,7 +8,7 @@ echo.
 echo   Please stay in this window until it disappears
 echo.
 
-cd /d %~dp0
+cd /d "%~dp0"
 if exist "hide_CLI_by_python.txt" (
     goto begin
 ) else (
@@ -21,7 +21,6 @@ if "%1"=="h" goto begin
 start mshta vbscript:createobject("wscript.shell").run("%~nx0"^&" h",0)^&(window.close) && exit /b
 
 :begin
-cd /d %~dp0
-for /F "tokens=* USEBACKQ" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
-
-python "%~dp0\main.py"
+cd /d "%~dp0"
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+uv run --locked "%~dp0\main.py"

@@ -2,7 +2,8 @@
 echo Loading extension, please stand by.
 echo.
 
-cd /d %~dp0
+cd /d "%~dp0"
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 chcp 65001
 
 :start_install
@@ -38,14 +39,19 @@ goto start_install
 
 @REM -------------------------------------------------
 :install_module
-poetry run pip install wechat-ocr -i https://pypi.tuna.tsinghua.edu.cn/simple
-cd ..
-cd ..
-cd ocr_lib
-git clone https://github.com/Antonoko/wxocr-binary
-cd ..
-cd extension
-cd install_wechat_ocr
+cd /d "%~dp0\..\.."
+uv sync --locked --inexact --extra wechat-ocr
+if errorlevel 1 (
+    echo [ERROR] Failed to install wechat-ocr extra. Please update the app first.
+    pause
+    exit /b 1
+)
+if not exist "ocr_lib\wxocr-binary" (
+    cd ocr_lib
+    git clone https://github.com/Antonoko/wxocr-binary
+    cd ..
+)
+cd /d "%~dp0"
 goto :finish
 
 
@@ -54,8 +60,7 @@ goto :finish
 echo.
 echo   checking the installation results... 检查安装结果……
 echo.
-for /F "tokens=* USEBACKQ" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
-python _test_install.py
+uv run --locked python _test_install.py
 echo.
 echo   The installation script has been completed. 已执行完安装脚本。
 echo.

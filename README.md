@@ -34,14 +34,12 @@ Windrecorder is a memory search app by records everything on your screen in smal
 
 - Install [Git](https://git-scm.com/download/win), just keep clicking next step.
 
-- Install [Python](https://www.python.org/ftp/python/3.11.7/python-3.11.7-amd64.exe), make sure to check `Add python.exe to PATH` when installing.
-     - **Currently, Python 3.12 is not supported**. It is recommended to use python 3.11, which is the version pointed to by the link above.
-
 - In file explorer, navigate to the directory where you want to install Windrecorder (it is recommended to place it in a partition with sufficient space), and download the app through the terminal command `git clone https://github.com/yuka-friends/Windrecorder`
 
      - You can open the folder you want to install, enter `cmd` in the path bar and press Enter, and you will be located into current directory in terminal, then paste the above command and press Enter to execute;
 
-- Open `install_update.bat` in the directory to install dependencies and configure the app. If everything goes well, you can start using it!
+- Open `install_update.bat` in the directory. It installs [uv](https://github.com/astral-sh/uv) if needed, prepares Python 3.11 and the project `.venv`, then runs setup. If everything goes well, you can start using it!
+     - **Python 3.12 is not supported.** You do **not** need to pre-install Python or Poetry; uv manages them.
 
 
 # 🦝 How to use

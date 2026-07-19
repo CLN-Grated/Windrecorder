@@ -2,12 +2,12 @@
 echo Loading extension, please stand by.
 echo.
 
-cd /d %~dp0
-for /F "tokens=* USEBACKQ" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
+cd /d "%~dp0"
+set "PATH=%USERPROFILE%\.local\bin;%PATH%"
 chcp 65001
 
 :start_rollback
-python _rollback_old_imgemb_db.py
+uv run --locked python _rollback_old_imgemb_db.py
 
 @REM -------------------------------------------------
 :finish

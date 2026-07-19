@@ -1,22 +1,63 @@
 @echo off
 title Windrecorder - installing dependence and updating
 mode con cols=150 lines=50
+setlocal EnableExtensions
 
-cd /d %~dp0
+cd /d "%~dp0"
+set "PROJECT_ROOT=%cd%"
 
 echo -git: updating repository
 git pull
+if errorlevel 1 (
+    echo [ERROR] git pull failed.
+    goto fail
+)
 
-echo -updating dependencies
-python -m pip install poetry
-python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple poetry
-python -m poetry config virtualenvs.in-project true
-python -m poetry install
+call :ensure_uv
+if errorlevel 1 goto fail
 
-for /F "usebackq tokens=*" %%A in (`python -m poetry env info --path`) do call "%%A\Scripts\activate.bat"
-
+echo -preparing Python, virtual environment, and dependencies with uv
 color 0e
 title Windrecorder - Quick Setup
-python "%~dp0\onboard_setting.py"
+uv run --locked "%PROJECT_ROOT%\onboard_setting.py"
+if errorlevel 1 (
+    echo [ERROR] onboard setup failed.
+    goto fail
+)
 
+echo.
+echo Installation finished.
 pause
+exit /b 0
+
+:fail
+echo.
+echo Installation stopped due to an error.
+pause
+exit /b 1
+
+:ensure_uv
+where uv >nul 2>nul
+if not errorlevel 1 exit /b 0
+
+rem Official standalone installer default location
+if exist "%USERPROFILE%\.local\bin\uv.exe" (
+    set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+    where uv >nul 2>nul
+    if not errorlevel 1 exit /b 0
+)
+
+echo -installing uv
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://astral.sh/uv/install.ps1 | iex"
+if errorlevel 1 (
+    echo [ERROR] Failed to download/install uv.
+    exit /b 1
+)
+
+if exist "%USERPROFILE%\.local\bin\uv.exe" set "PATH=%USERPROFILE%\.local\bin;%PATH%"
+where uv >nul 2>nul
+if errorlevel 1 (
+    echo [ERROR] uv was installed but is not on PATH. Open a new terminal, or add %%USERPROFILE%%\.local\bin to PATH.
+    exit /b 1
+)
+exit /b 0
