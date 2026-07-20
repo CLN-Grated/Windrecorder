@@ -15,6 +15,8 @@ import {
 } from "@/lib/api"
 import { useT } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { I18nMarkdown } from "@/components/I18nMarkdown"
+import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -24,6 +26,7 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 function ActivitySpark({ points }: { points: DayChart["points"] }) {
   const max = Math.max(1, ...points.map((p) => p.data))
@@ -157,41 +160,42 @@ export function OnedayPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <CalendarDays className="size-5 text-primary" />
-            <h1 className="text-xl font-semibold tracking-tight">{t("oneday_title")}</h1>
-            <Badge variant="secondary">Oneday</Badge>
+      <PageHeader
+        titleKey="oneday_title"
+        badge={<Badge variant="secondary">Oneday</Badge>}
+        description={
+          <span className="inline-flex items-center gap-1">
+            <CalendarDays className="size-3.5" /> {t("tab_name_oneday")} · WebUI Next
+          </span>
+        }
+        actions={
+          <div className="flex flex-wrap items-center gap-2">
+            <Button variant="outline" size="sm" onClick={() => setDate((d) => shiftDate(d, -1))} disabled={!date}>
+              <ChevronLeft className="size-4" />
+              {t("oneday_btn_yesterday")}
+            </Button>
+            <Input type="date" className="w-[10.5rem]" value={date} onChange={(e) => setDate(e.target.value)} />
+            <Button variant="outline" size="sm" onClick={() => setDate((d) => shiftDate(d, 1))} disabled={!date}>
+              {t("oneday_btn_tomorrow")}
+              <ChevronRight className="size-4" />
+            </Button>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                const now = new Date()
+                const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
+                setDate(iso)
+              }}
+            >
+              {t("oneday_btn_today")}
+            </Button>
+            <Button variant="ghost" size="icon-sm" onClick={() => date && void loadDay(date)} disabled={loading}>
+              <RefreshCw className={cn("size-4", loading && "animate-spin")} />
+            </Button>
           </div>
-          <p className="text-sm text-muted-foreground">{t("tab_name_oneday")} · WebUI Next</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setDate((d) => shiftDate(d, -1))} disabled={!date}>
-            <ChevronLeft className="size-4" />
-            {t("oneday_btn_yesterday")}
-          </Button>
-          <Input type="date" className="w-[10.5rem]" value={date} onChange={(e) => setDate(e.target.value)} />
-          <Button variant="outline" size="sm" onClick={() => setDate((d) => shiftDate(d, 1))} disabled={!date}>
-            {t("oneday_btn_tomorrow")}
-            <ChevronRight className="size-4" />
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => {
-              const now = new Date()
-              const iso = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`
-              setDate(iso)
-            }}
-          >
-            {t("oneday_btn_today")}
-          </Button>
-          <Button variant="ghost" size="icon-sm" onClick={() => date && void loadDay(date)} disabled={loading}>
-            <RefreshCw className={cn("size-4", loading && "animate-spin")} />
-          </Button>
-        </div>
-      </div>
+        }
+      />
 
       {error && (
         <Alert variant="destructive">
@@ -204,7 +208,9 @@ export function OnedayPage() {
         <CardHeader className="pb-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base">{t("oneday_title")}</CardTitle>
+              <CardTitle className="text-base">
+                <I18nMarkdown k="oneday_title" variant="sectionTitle" />
+              </CardTitle>
               <CardDescription>
                 {meta?.has_data
                   ? `${formatClock(meta.min_datetime)} — ${formatClock(meta.max_datetime)} · ${meta.result_count}`
@@ -270,10 +276,9 @@ export function OnedayPage() {
                   className="max-h-28 w-full rounded-md object-cover object-left"
                 />
               ) : (
-                <div
-                  className="flex h-16 items-center justify-center rounded-md border border-dashed text-sm text-muted-foreground"
-                  dangerouslySetInnerHTML={{ __html: t("oneday_md_no_enough_thunmbnail_for_timeline") }}
-                />
+                <div className="flex h-16 items-center justify-center rounded-md border border-dashed px-3 text-sm text-muted-foreground">
+                  <I18nMarkdown k="oneday_md_no_enough_thunmbnail_for_timeline" variant="muted" />
+                </div>
               )}
 
               {chart && chart.points.length > 0 && <ActivitySpark points={chart.points} />}
@@ -325,32 +330,53 @@ export function OnedayPage() {
       >
         <Card className="min-h-64">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("oneday_ls_title_wintitle")}</CardTitle>
-            <CardDescription>{t("stat_md_month_title")}</CardDescription>
+            <CardTitle className="text-base">
+              <I18nMarkdown k="oneday_ls_title_wintitle" variant="sectionTitle" />
+            </CardTitle>
+            <CardDescription title={t("oneday_wt_help")}>{t("oneday_wt_help")}</CardDescription>
           </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-72 pr-3">
-              {wintitle && wintitle.items.length > 0 ? (
-                <ul className="space-y-2">
-                  {wintitle.items.slice(0, 40).map((item) => (
-                    <li key={item.page} className="flex items-start justify-between gap-2 text-sm">
-                      <span className="line-clamp-2 text-left">{item.page}</span>
-                      <Badge variant="outline" className="shrink-0 font-mono text-[10px]">
-                        {item.screen_time}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-muted-foreground">{t("oneday_text_vid_and_data_not_found")}</p>
-              )}
-            </ScrollArea>
+          <CardContent className="px-0 pb-0">
+            {wintitle && wintitle.items.length > 0 ? (
+              <ScrollArea className="h-[28rem] px-4 pb-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      {/* Streamlit: Page column labeled as oneday_wt_text + total */}
+                      <TableHead className="w-[72%]" title={t("oneday_wt_help")}>
+                        {t("oneday_wt_text")}
+                        {wintitle.screentime_sum ? `   -   ${wintitle.screentime_sum}` : ""}
+                      </TableHead>
+                      {/* DataFrame second column name is fixed "Screen Time" in backend */}
+                      <TableHead className="text-right">Screen Time</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {wintitle.items.map((item) => (
+                      <TableRow key={item.page}>
+                        <TableCell className="max-w-0 whitespace-normal break-words font-normal">
+                          {item.page}
+                        </TableCell>
+                        <TableCell className="text-right font-mono text-xs tabular-nums text-muted-foreground">
+                          {item.screen_time}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            ) : (
+              <div className="px-4 pb-4">
+                <I18nMarkdown k="oneday_ls_text_no_wintitle_stat" variant="muted" />
+              </div>
+            )}
           </CardContent>
         </Card>
 
         <Card className="min-h-64">
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("oneday_title")}</CardTitle>
+            <CardTitle className="text-base">
+              <I18nMarkdown k="oneday_title" variant="sectionTitle" />
+            </CardTitle>
             <CardDescription>
               {locate?.video_filename
                 ? locate.video_filename
@@ -418,7 +444,7 @@ export function OnedayPage() {
             {searchOn && search && search.hits.length > 0 ? (
               <div className="space-y-2">
                 <Separator />
-                <p className="text-xs font-medium text-muted-foreground">{t("gs_md_search_result_below", { timecost: "" })}</p>
+                <I18nMarkdown k="gs_md_search_result_below" vars={{ timecost: "" }} variant="muted" className="text-xs font-medium" />
                 <ScrollArea className="h-40">
                   <ul className="space-y-1">
                     {search.hits.map((hit) => (

@@ -83,6 +83,7 @@
   "log_dir": "cache\\logs",
   "win_title_dir": "cache\\win_title",
   "webui_access_password_md5": "",
+  "webui_access_password_hash": "",
   "enable_img_embed_search": true,
   "img_embed_search_recall_result_per_db": 30,
   "img_embed_module_install": false,

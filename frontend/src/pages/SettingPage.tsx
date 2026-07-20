@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react"
 import { Settings } from "lucide-react"
 
-import { api } from "@/lib/api"
+import { api, type DbStatus } from "@/lib/api"
 import { useI18n, useT } from "@/lib/i18n"
+import { I18nMarkdown, MarkdownBlock } from "@/components/I18nMarkdown"
+import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -20,12 +22,12 @@ type SettingValues = {
   recycle_deleted_files: boolean
   enable_3_columns_in_oneday: boolean
   use_similar_ch_char_to_search: boolean
-  enable_synonyms_recommend: boolean
   max_page_result: number
   day_begin_minutes: number
   oneday_timeline_pic_num: number
   webui_backend: string
   webui_password_enabled: boolean
+  OCR_index_strategy?: number
 }
 
 export default function SettingPage() {
@@ -33,32 +35,54 @@ export default function SettingPage() {
   const { refresh } = useI18n()
   const [settings, setSettings] = useState<SettingValues | null>(null)
   const [osLangs, setOsLangs] = useState<string[]>([])
-  const [dbStatus, setDbStatus] = useState<{
-    video_count: number
-    unindexed_count: number
-    estimate_indexing_time: string
-    OCR_index_strategy: number
-  } | null>(null)
+  const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [about, setAbout] = useState<{ version: string; new_version: string | null; about_markdown: string } | null>(
     null,
   )
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [updatingDb, setUpdatingDb] = useState(false)
+  const [shutdownAfter, setShutdownAfter] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
 
+  const load = async () => {
+    const [opts, ab] = await Promise.all([api.settingOptions(), api.settingAbout()])
+    setSettings(opts.settings as SettingValues)
+    setOsLangs((opts.os_support_lang as string[]) || [])
+    setDbStatus(opts.db_status as DbStatus)
+    setAbout(ab)
+  }
+
   useEffect(() => {
-    Promise.all([api.settingOptions(), api.settingAbout()])
-      .then(([opts, ab]) => {
-        setSettings(opts.settings as SettingValues)
-        setOsLangs((opts.os_support_lang as string[]) || [])
-        setDbStatus(opts.db_status as typeof dbStatus)
-        setAbout(ab)
-      })
+    load()
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
   }, [])
+
+  // Poll manual update job while running
+  useEffect(() => {
+    if (!updatingDb) return
+    const id = window.setInterval(() => {
+      api
+        .settingUpdateDbStatus()
+        .then((job) => {
+          setDbStatus((prev) => (prev ? { ...prev, update_job: job } : prev))
+          if (!job.running) {
+            setUpdatingDb(false)
+            if (job.ok) {
+              setMessage(t("set_text_db_updated_successful", { timeCostStr: `${job.time_cost_seconds ?? "?"}s` }))
+            } else if (job.error) {
+              setError(job.error)
+            }
+            void api.settingDbStatus().then(setDbStatus)
+          }
+        })
+        .catch(() => {})
+    }, 1500)
+    return () => window.clearInterval(id)
+  }, [updatingDb, t])
 
   const save = async () => {
     if (!settings) return
@@ -91,11 +115,11 @@ export default function SettingPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
-      <div className="flex items-center gap-2">
-        <Settings className="size-5 text-primary" />
-        <h1 className="text-xl font-semibold">{t("set_md_title")}</h1>
-        <Badge variant="secondary">Settings</Badge>
-      </div>
+      <PageHeader
+        titleKey="set_md_title"
+        badge={<Badge variant="secondary">Settings</Badge>}
+        description={<span className="inline-flex items-center gap-1"><Settings className="size-3.5" /> WebUI Next</span>}
+      />
 
       {error ? (
         <Alert variant="destructive">
@@ -111,60 +135,114 @@ export default function SettingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("set_md_index_db")}</CardTitle>
+          <CardTitle className="text-base">
+            <I18nMarkdown k="set_md_index_db" variant="sectionTitle" />
+          </CardTitle>
           <CardDescription>
             {dbStatus
               ? `videos ${dbStatus.video_count}, unindexed ${dbStatus.unindexed_count}, ETA ${dbStatus.estimate_indexing_time}`
               : "—"}
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid gap-3 md:grid-cols-2">
-          <label className="text-sm">
-            {t("set_selectbox_local_ocr_engine")}
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
-              value={settings.ocr_engine}
-              onChange={(e) => setSettings({ ...settings, ocr_engine: e.target.value })}
-            >
-              {(settings.support_ocr_lst || []).map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="text-sm">
-            {t("set_selectbox_ocr_lang")}
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
-              value={settings.ocr_lang}
-              onChange={(e) => setSettings({ ...settings, ocr_lang: e.target.value })}
-            >
-              {(osLangs.length ? osLangs : [settings.ocr_lang]).map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={settings.index_reduce_same_content_at_different_time}
-              onChange={(e) =>
-                setSettings({ ...settings, index_reduce_same_content_at_different_time: e.target.checked })
-              }
-            />
-            {t("set_checkbox_reduce_same_content_at_different_time")}
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={settings.recycle_deleted_files}
-              onChange={(e) => setSettings({ ...settings, recycle_deleted_files: e.target.checked })}
-            />
-            {t("set_checkbox_recycle_deleted_files")}
-          </label>
+        <CardContent className="space-y-4">
+          {dbStatus?.message_key ? (
+            <Alert variant={dbStatus.level === "warning" ? "destructive" : "default"}>
+              <AlertTitle>
+                {t(dbStatus.message_key, {
+                  nocred_count: dbStatus.unindexed_count,
+                  count: dbStatus.video_count,
+                  timeCostStr: dbStatus.estimate_indexing_time,
+                })}
+              </AlertTitle>
+            </Alert>
+          ) : null}
+
+          {(dbStatus?.manual_update_available || dbStatus?.OCR_index_strategy === 0) && (
+            <div className="flex flex-wrap items-center gap-3 rounded-lg border p-3">
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={updatingDb || dbStatus?.update_job?.running}
+                onClick={async () => {
+                  setError(null)
+                  setMessage(null)
+                  try {
+                    const res = await api.settingUpdateDb(shutdownAfter)
+                    if (!res.ok) {
+                      setError(res.error || "update failed")
+                      return
+                    }
+                    setUpdatingDb(true)
+                    setMessage(t("set_text_updating_db", { estimate_time_str: res.estimate_indexing_time || "" }))
+                  } catch (e) {
+                    setError(e instanceof Error ? e.message : String(e))
+                  }
+                }}
+              >
+                {updatingDb || dbStatus?.update_job?.running
+                  ? t("set_text_updating_db", { estimate_time_str: dbStatus?.estimate_indexing_time || "..." })
+                  : t("set_btn_update_db_manual")}
+              </Button>
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={shutdownAfter}
+                  disabled={updatingDb}
+                  onChange={(e) => setShutdownAfter(e.target.checked)}
+                />
+                {t("set_checkbox_shutdown_after_updated")}
+              </label>
+            </div>
+          )}
+
+          <div className="grid gap-3 md:grid-cols-2">
+            <label className="text-sm">
+              {t("set_selectbox_local_ocr_engine")}
+              <select
+                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+                value={settings.ocr_engine}
+                onChange={(e) => setSettings({ ...settings, ocr_engine: e.target.value })}
+              >
+                {(settings.support_ocr_lst || []).map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="text-sm">
+              {t("set_selectbox_ocr_lang")}
+              <select
+                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+                value={settings.ocr_lang}
+                onChange={(e) => setSettings({ ...settings, ocr_lang: e.target.value })}
+              >
+                {(osLangs.length ? osLangs : [settings.ocr_lang]).map((e) => (
+                  <option key={e} value={e}>
+                    {e}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.index_reduce_same_content_at_different_time}
+                onChange={(e) =>
+                  setSettings({ ...settings, index_reduce_same_content_at_different_time: e.target.checked })
+                }
+              />
+              {t("set_checkbox_reduce_same_content_at_different_time")}
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={settings.recycle_deleted_files}
+                onChange={(e) => setSettings({ ...settings, recycle_deleted_files: e.target.checked })}
+              />
+              {t("set_checkbox_recycle_deleted_files")}
+            </label>
+          </div>
         </CardContent>
       </Card>
 
@@ -250,7 +328,7 @@ export default function SettingPage() {
         </CardHeader>
         <CardContent>
           {about?.about_markdown ? (
-            <div className="prose prose-sm max-w-none dark:prose-invert" dangerouslySetInnerHTML={{ __html: about.about_markdown }} />
+            <MarkdownBlock content={about.about_markdown} variant="body" className="max-w-none" />
           ) : (
             <p className="text-sm text-muted-foreground">Windrecorder</p>
           )}

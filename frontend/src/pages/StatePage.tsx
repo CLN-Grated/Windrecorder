@@ -3,6 +3,8 @@ import { BarChart3, ImageIcon, RefreshCw } from "lucide-react"
 
 import { api } from "@/lib/api"
 import { useT } from "@/lib/i18n"
+import { I18nMarkdown } from "@/components/I18nMarkdown"
+import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -111,32 +113,32 @@ export default function StatePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <BarChart3 className="size-5 text-primary" />
-          <h1 className="text-xl font-semibold tracking-tight">{t("stat_md_month_title")}</h1>
-          <Badge variant="secondary">Summary</Badge>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input
-            type="number"
-            className="w-24"
-            value={year}
-            onChange={(e) => setYear(Number(e.target.value) || year)}
-          />
-          <Input
-            type="number"
-            className="w-20"
-            min={1}
-            max={12}
-            value={month}
-            onChange={(e) => setMonth(Math.min(12, Math.max(1, Number(e.target.value) || month)))}
-          />
-          <Button size="icon-sm" variant="ghost" onClick={() => void load()} disabled={loading}>
-            <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} />
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        titleKey="stat_md_month_title"
+        badge={<Badge variant="secondary">Summary</Badge>}
+        description={<span className="inline-flex items-center gap-1"><BarChart3 className="size-3.5" /> WebUI Next</span>}
+        actions={
+          <div className="flex items-center gap-2">
+            <Input
+              type="number"
+              className="w-24"
+              value={year}
+              onChange={(e) => setYear(Number(e.target.value) || year)}
+            />
+            <Input
+              type="number"
+              className="w-20"
+              min={1}
+              max={12}
+              value={month}
+              onChange={(e) => setMonth(Math.min(12, Math.max(1, Number(e.target.value) || month)))}
+            />
+            <Button size="icon-sm" variant="ghost" onClick={() => void load()} disabled={loading}>
+              <RefreshCw className={loading ? "size-4 animate-spin" : "size-4"} />
+            </Button>
+          </div>
+        }
+      />
 
       {error ? (
         <Alert variant="destructive">
@@ -148,7 +150,9 @@ export default function StatePage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("stat_md_month_title")}</CardTitle>
+            <CardTitle className="text-base">
+              <I18nMarkdown k="stat_md_month_title" variant="sectionTitle" />
+            </CardTitle>
             <CardDescription>
               {year}-{String(month).padStart(2, "0")}
             </CardDescription>
@@ -159,7 +163,9 @@ export default function StatePage() {
         </Card>
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-base">{t("stat_md_year_title", { stat_year_title: year })}</CardTitle>
+            <CardTitle className="text-base">
+              <I18nMarkdown k="stat_md_year_title" vars={{ stat_year_title: year }} variant="sectionTitle" />
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loading && !yearPoints.length ? <Skeleton className="h-56 w-full" /> : <ScatterYear points={yearPoints} />}
@@ -169,7 +175,9 @@ export default function StatePage() {
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base">{t("stat_md_memory_title")}</CardTitle>
+          <CardTitle className="text-base">
+            <I18nMarkdown k="stat_md_memory_title" variant="sectionTitle" />
+          </CardTitle>
           <CardDescription>Lightbox / Wordcloud</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">

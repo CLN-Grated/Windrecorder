@@ -86,3 +86,5 @@ class WintitleItem(BaseModel):
 class WintitleResponse(BaseModel):
     date: str
     items: list[WintitleItem] = Field(default_factory=list)
+    screentime_sum_seconds: int = 0
+    screentime_sum: str = "0s"

@@ -52,7 +52,12 @@ export type DaySearch = {
 }
 
 export type WintitleItem = { page: string; screen_time: string }
-export type WintitleStat = { date: string; items: WintitleItem[] }
+export type WintitleStat = {
+  date: string
+  items: WintitleItem[]
+  screentime_sum_seconds?: number
+  screentime_sum?: string
+}
 
 export type I18nPayload = {
   lang: string
@@ -68,18 +73,10 @@ export type PublicConfig = {
   day_begin_minutes: number
   max_page_result: number
   enable_3_columns_in_oneday: boolean
-  enable_img_embed_search: boolean
-  img_embed_module_install: boolean
-  enable_synonyms_recommend: boolean
-  enable_ai_extract_tag: boolean
-  enable_ai_day_poem: boolean
   enable_ocr_str_highlight_indicator: boolean
   record_deep_linking: boolean
   webui_password_enabled: boolean
-  open_ai_base_url: string
-  open_ai_modelname: string
-  open_ai_api_key_set: boolean
-  open_ai_api_key_masked: string
+  OCR_index_strategy?: number
 }
 
 export type FooterState = Record<string, string | number | boolean | null | undefined>
@@ -90,9 +87,27 @@ export type SearchBounds = {
   earliest_datetime: string | null
   latest_datetime: string | null
   max_page_result: number
-  enable_img_embed: boolean
-  enable_synonyms: boolean
-  img_embed_module_install: boolean
+  enable_img_embed?: boolean
+  enable_synonyms?: boolean
+  img_embed_module_install?: boolean
+}
+
+export type DbStatus = {
+  video_count: number
+  unindexed_count: number
+  OCR_index_strategy: number
+  estimate_indexing_time: string
+  is_recording: boolean
+  level?: string
+  message_key?: string
+  manual_update_available?: boolean
+  update_job?: {
+    running: boolean
+    ok: boolean | null
+    error: string | null
+    time_cost_seconds: number | null
+    shutdown_after?: boolean
+  }
 }
 
 export type GlobalSearchHit = {
@@ -124,7 +139,7 @@ export type GlobalSearchResult = {
 }
 
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
+  const res = await fetch(url, { credentials: "include" })
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`)
@@ -133,7 +148,21 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 async function postForm<T>(url: string, form: FormData): Promise<T> {
-  const res = await fetch(url, { method: "POST", body: form })
+  const res = await fetch(url, { method: "POST", body: form, credentials: "include" })
+  if (!res.ok) {
+    const text = await res.text().catch(() => "")
+    throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`)
+  }
+  return res.json() as Promise<T>
+}
+
+async function postJson<T>(url: string, body: unknown): Promise<T> {
+  const res = await fetch(url, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  })
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`)
@@ -143,6 +172,14 @@ async function postForm<T>(url: string, form: FormData): Promise<T> {
 
 export const api = {
   health: () => getJson<{ ok: boolean; version: string; lang: string }>("/api/health"),
+  authStatus: () =>
+    getJson<{ password_enabled: boolean; authenticated: boolean }>("/api/auth/status"),
+  authLogin: (password: string) => {
+    const form = new FormData()
+    form.set("password", password)
+    return postForm<{ ok: boolean; authenticated: boolean; token?: string }>("/api/auth/login", form)
+  },
+  authLogout: () => postForm<{ ok: boolean }>("/api/auth/logout", new FormData()),
   i18n: (lang?: string) =>
     getJson<I18nPayload>(lang ? `/api/i18n?lang=${encodeURIComponent(lang)}` : "/api/i18n"),
   publicConfig: () => getJson<PublicConfig>("/api/config/public"),
@@ -174,32 +211,6 @@ export const api = {
     form.set("date_out", params.date_out)
     form.set("page_index", String(params.page_index ?? 1))
     return postForm<GlobalSearchResult>("/api/search/ocr", form)
-  },
-  searchImgText: (params: {
-    query: string
-    date_in: string
-    date_out: string
-    page_index?: number
-  }) => {
-    const form = new FormData()
-    form.set("query", params.query)
-    form.set("date_in", params.date_in)
-    form.set("date_out", params.date_out)
-    form.set("page_index", String(params.page_index ?? 1))
-    return postForm<GlobalSearchResult>("/api/search/img-text", form)
-  },
-  searchImgSimilar: (params: {
-    file: File
-    date_in: string
-    date_out: string
-    page_index?: number
-  }) => {
-    const form = new FormData()
-    form.set("file", params.file)
-    form.set("date_in", params.date_in)
-    form.set("date_out", params.date_out)
-    form.set("page_index", String(params.page_index ?? 1))
-    return postForm<GlobalSearchResult>("/api/search/img-similar", form)
   },
   stateRange: () =>
     getJson<{
@@ -234,51 +245,33 @@ export const api = {
   },
   recordingOptions: () => getJson<Record<string, unknown>>("/api/recording/options"),
   recordingSave: (payload: Record<string, unknown>) =>
-    fetch("/api/recording/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then(async (res) => {
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ ok: boolean; applied: string[] }>
-    }),
+    postJson<{ ok: boolean; applied: string[] }>("/api/recording/save", payload),
   settingOptions: () => getJson<Record<string, unknown>>("/api/setting/options"),
   settingSave: (payload: Record<string, unknown>) =>
-    fetch("/api/setting/save", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then(async (res) => {
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ ok: boolean; applied: string[] }>
-    }),
-  settingDbStatus: () =>
+    postJson<{ ok: boolean; applied: string[] }>("/api/setting/save", payload),
+  settingDbStatus: () => getJson<DbStatus>("/api/setting/db-status"),
+  settingUpdateDb: (shutdown_after = false) => {
+    const form = new FormData()
+    form.set("shutdown_after", shutdown_after ? "true" : "false")
+    return postForm<{
+      ok: boolean
+      started?: boolean
+      error?: string
+      estimate_indexing_time?: string
+      job?: DbStatus["update_job"]
+    }>("/api/setting/update-db", form)
+  },
+  settingUpdateDbStatus: () =>
     getJson<{
-      video_count: number
-      unindexed_count: number
-      OCR_index_strategy: number
-      estimate_indexing_time: string
-      is_recording: boolean
-    }>("/api/setting/db-status"),
+      running: boolean
+      ok: boolean | null
+      error: string | null
+      time_cost_seconds: number | null
+      started_at: number | null
+      finished_at: number | null
+    }>("/api/setting/update-db/status"),
   settingAbout: () =>
     getJson<{ version: string; new_version: string | null; about_markdown: string }>("/api/setting/about"),
-  labSettings: () => getJson<Record<string, unknown>>("/api/lab/settings"),
-  labSave: (payload: Record<string, unknown>) =>
-    fetch("/api/lab/settings", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    }).then(async (res) => {
-      if (!res.ok) throw new Error(await res.text())
-      return res.json() as Promise<{ ok: boolean; applied: string[] }>
-    }),
-  labTestLlm: (params?: { open_ai_base_url?: string; open_ai_api_key?: string; open_ai_modelname?: string }) => {
-    const form = new FormData()
-    if (params?.open_ai_base_url) form.set("open_ai_base_url", params.open_ai_base_url)
-    if (params?.open_ai_api_key) form.set("open_ai_api_key", params.open_ai_api_key)
-    if (params?.open_ai_modelname) form.set("open_ai_modelname", params.open_ai_modelname)
-    return postForm<{ success: boolean; respond: string }>("/api/lab/test-llm", form)
-  },
 }
 
 export function shiftDate(isoDate: string, days: number): string {

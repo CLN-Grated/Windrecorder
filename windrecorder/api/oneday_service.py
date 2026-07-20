@@ -340,12 +340,21 @@ def search_day(day: datetime.date, query: str) -> dict[str, Any]:
 
 
 def get_wintitle_stat(day: datetime.date) -> dict[str, Any]:
-    df_show = OneDay().get_wintitle_stat_in_day(day_range_start(day))
+    """Match Streamlit oneday side panel: Page | Screen Time table + total seconds."""
+    from windrecorder import record_wintitle
+
+    # Use calendar date like Streamlit component_wintitle_stat(day_date_input)
+    df_show, time_sum = record_wintitle.get_wintitle_stat_in_day(day, optimize_for_display=True)
     items = []
     if df_show is not None and not df_show.empty:
         for _, row in df_show.iterrows():
             items.append({"page": str(row["Page"]), "screen_time": str(row["Screen Time"])})
-    return {"date": day.isoformat(), "items": items}
+    return {
+        "date": day.isoformat(),
+        "items": items,
+        "screentime_sum_seconds": int(time_sum or 0),
+        "screentime_sum": utils.convert_seconds_to_hhmmss(int(time_sum or 0), False),
+    }
 
 
 def resolve_video_path(filename: str) -> Optional[str]:

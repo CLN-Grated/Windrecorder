@@ -10,7 +10,6 @@ const NAV = [
   { to: "/", key: "tab_name_oneday", end: true },
   { to: "/search", key: "tab_name_search" },
   { to: "/state", key: "tab_name_stat" },
-  { to: "/lab", key: "tab_name_lab" },
   { to: "/recording", key: "tab_name_recording" },
   { to: "/setting", key: "tab_name_setting" },
 ] as const

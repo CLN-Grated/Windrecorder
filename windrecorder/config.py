@@ -123,6 +123,7 @@ class Config:
         enable_ocr_str_highlight_indicator,
         recycle_deleted_files,
         webui_backend="fastapi",
+        webui_access_password_hash="",
         compress_cpu_threads=None,
         **other_field,
     ) -> None:
@@ -185,6 +186,8 @@ class Config:
         self.thumbnail_generation_size_width = thumbnail_generation_size_width
         self.thumbnail_generation_jpg_quality = thumbnail_generation_jpg_quality
         self.webui_access_password_md5 = webui_access_password_md5
+        # bcrypt hash for FastAPI WebUI (preferred); md5 is legacy migration-only
+        self.webui_access_password_hash = webui_access_password_hash or ""
         self.enable_img_embed_search = enable_img_embed_search
         self.img_embed_search_recall_result_per_db = img_embed_search_recall_result_per_db
         self.img_embed_module_install = img_embed_module_install

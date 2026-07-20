@@ -2,20 +2,20 @@ from __future__ import annotations
 
 import mimetypes
 import os
+import tempfile
 from pathlib import Path
 
-import tempfile
-
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from windrecorder import __version__
 from windrecorder.api import (
+    auth,
     config_service,
     i18n_service,
-    lab_service,
     oneday_service,
     recording_service,
     search_service,
@@ -40,6 +40,20 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FRONTEND_DIST = PROJECT_ROOT / "frontend" / "dist"
 
 
+class WebUIAuthMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        if auth.is_public_path(path):
+            return await call_next(request)
+        # Protect /api/* and /media/*
+        if path.startswith("/api") or path.startswith("/media"):
+            try:
+                auth.require_auth(request)
+            except HTTPException as e:
+                return JSONResponse(status_code=e.status_code, content={"detail": e.detail})
+        return await call_next(request)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Windrecorder Web API", version=__version__)
 
@@ -50,6 +64,7 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(WebUIAuthMiddleware)
 
     @app.get("/api/health", response_model=HealthResponse)
     def health():
@@ -59,6 +74,29 @@ def create_app() -> FastAPI:
             lang=config.lang,
             webui_backend=getattr(config, "webui_backend", "fastapi"),
         )
+
+    # ----- Auth -----
+    @app.get("/api/auth/status")
+    def auth_status(request: Request):
+        enabled = auth.password_enabled()
+        authenticated = (not enabled) or auth.token_valid(auth.read_token_from_request(request))
+        return {"password_enabled": enabled, "authenticated": authenticated}
+
+    @app.post("/api/auth/login")
+    def auth_login(response: Response, password: str = Form(...)):
+        if not auth.password_enabled():
+            return {"ok": True, "authenticated": True, "password_enabled": False}
+        if not auth.verify_password(password):
+            raise HTTPException(status_code=401, detail="invalid_password")
+        token = auth.issue_token()
+        auth.set_auth_cookie(response, token)
+        return {"ok": True, "authenticated": True, "token": token, "password_enabled": True}
+
+    @app.post("/api/auth/logout")
+    def auth_logout(request: Request, response: Response):
+        auth.revoke_token(auth.read_token_from_request(request))
+        auth.clear_auth_cookie(response)
+        return {"ok": True, "authenticated": False}
 
     @app.get("/api/i18n")
     def api_i18n(lang: str | None = Query(None, description="Override language code")):
@@ -137,7 +175,7 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=400, detail=f"invalid date: {e}") from e
         return WintitleResponse(**oneday_service.get_wintitle_stat(day))
 
-    # ----- Global Search -----
+    # ----- Global Search (OCR only; AI/img-embed removed from WebUI Next) -----
     @app.get("/api/search/bounds")
     def search_bounds():
         return search_service.get_search_bounds()
@@ -156,51 +194,6 @@ def create_app() -> FastAPI:
         except ValueError as e:
             raise HTTPException(status_code=400, detail=f"invalid date: {e}") from e
         return search_service.search_ocr(keyword, din, dout, exclude=exclude, page_index=max(1, page_index))
-
-    @app.post("/api/search/img-text")
-    def search_img_text(
-        query: str = Form(...),
-        date_in: str = Form(...),
-        date_out: str = Form(...),
-        page_index: int = Form(1),
-    ):
-        try:
-            din = search_service.parse_iso_dt(date_in)
-            dout = search_service.parse_iso_dt(date_out)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"invalid date: {e}") from e
-        try:
-            return search_service.search_img_text(query, din, dout, page_index=max(1, page_index))
-        except RuntimeError as e:
-            raise HTTPException(status_code=501, detail=str(e)) from e
-
-    @app.post("/api/search/img-similar")
-    async def search_img_similar(
-        date_in: str = Form(...),
-        date_out: str = Form(...),
-        page_index: int = Form(1),
-        file: UploadFile = File(...),
-    ):
-        try:
-            din = search_service.parse_iso_dt(date_in)
-            dout = search_service.parse_iso_dt(date_out)
-        except ValueError as e:
-            raise HTTPException(status_code=400, detail=f"invalid date: {e}") from e
-        suffix = os.path.splitext(file.filename or "upload.jpg")[1] or ".jpg"
-        try:
-            with tempfile.NamedTemporaryFile(delete=False, suffix=suffix) as tmp:
-                content = await file.read()
-                tmp.write(content)
-                tmp_path = tmp.name
-            return search_service.search_img_similar(tmp_path, din, dout, page_index=max(1, page_index))
-        except RuntimeError as e:
-            raise HTTPException(status_code=501, detail=str(e)) from e
-        finally:
-            try:
-                if "tmp_path" in locals() and os.path.exists(tmp_path):
-                    os.remove(tmp_path)
-            except OSError:
-                pass
 
     # ----- State / Summary -----
     @app.get("/api/state/range")
@@ -229,7 +222,7 @@ def create_app() -> FastAPI:
     def state_wordcloud(year: int = Form(...), month: int = Form(...)):
         return state_service.generate_wordcloud(year, month)
 
-    # ----- Recording / Setting / Lab -----
+    # ----- Recording / Setting -----
     @app.get("/api/recording/options")
     def recording_options():
         return recording_service.get_options()
@@ -250,25 +243,17 @@ def create_app() -> FastAPI:
     def setting_db_status():
         return setting_service.get_db_status()
 
+    @app.post("/api/setting/update-db")
+    def setting_update_db(shutdown_after: bool = Form(False)):
+        return setting_service.start_update_db(shutdown_after=shutdown_after)
+
+    @app.get("/api/setting/update-db/status")
+    def setting_update_db_status():
+        return setting_service.get_update_db_status()
+
     @app.get("/api/setting/about")
     def setting_about():
         return setting_service.get_about()
-
-    @app.get("/api/lab/settings")
-    def lab_settings_get():
-        return lab_service.get_settings()
-
-    @app.post("/api/lab/settings")
-    def lab_settings_save(payload: dict):
-        return lab_service.save_settings(payload)
-
-    @app.post("/api/lab/test-llm")
-    def lab_test_llm(
-        open_ai_base_url: str | None = Form(None),
-        open_ai_api_key: str | None = Form(None),
-        open_ai_modelname: str | None = Form(None),
-    ):
-        return lab_service.test_llm(open_ai_base_url, open_ai_api_key, open_ai_modelname)
 
     @app.get("/media/video/{filename}")
     def media_video(filename: str):
@@ -298,7 +283,6 @@ def create_app() -> FastAPI:
 
         @app.get("/{full_path:path}")
         def spa_fallback(full_path: str):
-            # Don't shadow API/media
             if full_path.startswith("api/") or full_path.startswith("media/"):
                 raise HTTPException(status_code=404, detail="not found")
             candidate = FRONTEND_DIST / full_path

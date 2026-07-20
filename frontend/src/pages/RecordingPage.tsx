@@ -3,6 +3,8 @@ import { Video } from "lucide-react"
 
 import { api } from "@/lib/api"
 import { useT } from "@/lib/i18n"
+import { I18nMarkdown } from "@/components/I18nMarkdown"
+import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -91,11 +93,11 @@ export default function RecordingPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
-      <div className="flex items-center gap-2">
-        <Video className="size-5 text-primary" />
-        <h1 className="text-xl font-semibold">{t("rs_md_title")}</h1>
-        <Badge variant="secondary">Recording</Badge>
-      </div>
+      <PageHeader
+        titleKey="rs_md_title"
+        badge={<Badge variant="secondary">Recording</Badge>}
+        description={<span className="inline-flex items-center gap-1"><Video className="size-3.5" /> WebUI Next</span>}
+      />
       <Alert>
         <AlertTitle>{t("rs_text_need_to_restart_after_save_setting")}</AlertTitle>
       </Alert>
@@ -113,7 +115,9 @@ export default function RecordingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("rs_md_record_setting_title")}</CardTitle>
+          <CardTitle className="text-base">
+            <I18nMarkdown k="rs_md_record_setting_title" variant="sectionTitle" />
+          </CardTitle>
           <CardDescription>Core capture options</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
@@ -186,7 +190,9 @@ export default function RecordingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("set_md_auto_maintain")}</CardTitle>
+          <CardTitle className="text-base">
+            <I18nMarkdown k="set_md_auto_maintain" variant="sectionTitle" />
+          </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
