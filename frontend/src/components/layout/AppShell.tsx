@@ -2,6 +2,7 @@ import { NavLink, Outlet } from "react-router-dom"
 
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
+import { PublicAccessTip } from "@/components/layout/PublicAccessTip"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -66,6 +67,7 @@ export function AppShell() {
           i18n/config: {error}
         </div>
       ) : null}
+      <PublicAccessTip />
       <main>
         <Outlet />
       </main>

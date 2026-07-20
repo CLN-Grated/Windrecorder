@@ -40,6 +40,7 @@ export default function SettingPage() {
     null,
   )
   const [password, setPassword] = useState("")
+  const [removePassword, setRemovePassword] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [updatingDb, setUpdatingDb] = useState(false)
@@ -91,12 +92,17 @@ export default function SettingPage() {
     setError(null)
     try {
       const payload: Record<string, unknown> = { ...settings }
-      if (password.length > 0 || password === "") {
-        // empty string disables password when user clears intentionally via dedicated field submit
+      // Password: only send when setting a new one or explicitly removing (default is off / keep)
+      if (removePassword) {
+        payload.webui_access_password = ""
+      } else if (password) {
+        payload.webui_access_password = password
       }
-      if (password) payload.webui_access_password = password
       const res = await api.settingSave(payload)
       setMessage(`${t("utils_toast_setting_saved")} (${res.applied.join(", ")})`)
+      setPassword("")
+      setRemovePassword(false)
+      await load()
       await refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -306,15 +312,43 @@ export default function SettingPage() {
             />
             similar Chinese char search
           </label>
-          <label className="text-sm md:col-span-2">
-            {t("set_pwd_text")} {settings.webui_password_enabled ? "(enabled)" : "(off)"}
+        </CardContent>
+      </Card>
+
+      <Card id="webui-password">
+        <CardHeader>
+          <CardTitle className="text-base">{t("webui_pwd_card_title")}</CardTitle>
+          <CardDescription>{t("webui_pwd_card_desc")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <Badge variant={settings.webui_password_enabled ? "default" : "secondary"}>
+            {settings.webui_password_enabled ? t("webui_pwd_status_on") : t("webui_pwd_status_off")}
+          </Badge>
+          <label className="block text-sm">
+            {t("set_pwd_text")}
             <Input
               type="password"
+              className="mt-1"
+              autoComplete="new-password"
               value={password}
-              placeholder="leave empty to keep; type new password to set"
+              disabled={removePassword}
+              placeholder={t("webui_pwd_placeholder")}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={removePassword}
+              onChange={(e) => {
+                setRemovePassword(e.target.checked)
+                if (e.target.checked) setPassword("")
+              }}
+            />
+            {t("webui_pwd_remove")}
+          </label>
+          <p className="text-xs text-muted-foreground">{t("webui_pwd_clear_hint")}</p>
+          <p className="text-xs text-muted-foreground">{t("set_pwd_help")}</p>
         </CardContent>
       </Card>
 

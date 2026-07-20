@@ -1,14 +1,12 @@
 {
-    "en": {  
+    "en": {
         "main_title": "#### 🦝 Windrecorder",
-        
         "tab_name_oneday": "Daily",
         "tab_name_search": "Search",
         "tab_name_stat": "Summary",
         "tab_name_lab": "Lab",
         "tab_name_recording": "Recording & Video Storage",
         "tab_name_setting": "Settings",
-
         "text_search_keyword": "Search Keyword",
         "text_search_daterange": "Date Range",
         "text_search_not_found": "No results found for \"{search_content}\".",
@@ -16,11 +14,9 @@
         "utils_toast_setting_saved": "Changes applied.",
         "footer_info": "Earliest record time: **{first_record_time_str}**, latest record time: **{latest_record_time_str}**, index lines: **{latest_db_records}**, video storage: **{videos_file_size} GB** ({videos_files_count} video files)",
         "footer_info_help": "There may be a delay of up to two days in updating statistics.",
-
-        "text_welcome_to_windrecorder":"Welcome to Windrecorder!",
+        "text_welcome_to_windrecorder": "Welcome to Windrecorder!",
         "text_updating_month_stat": "Updating statistics for this month...",
         "text_updating_yearly_stat": "Updating statistics for this year...",
-        
         "oneday_title": "### 🖼️ Daily",
         "oneday_btn_yesterday": "← Prev Day",
         "oneday_btn_tomorrow": "Next Day →",
@@ -50,7 +46,6 @@
         "oneday_ls_text_no_wintitle_stat": "<p align='left' style='color:rgba(0,0,0,.3)'> No activity data for the day </p>",
         "oneday_ls_text_no_wintitle_stat_momnth": "<p align='left' style='color:rgba(0,0,0,.3)'> No activity data for the month </p>",
         "oneday_ls_text_disable_leftside": "<p align='center' style='color:rgba(0,0,0,.3)'> Sidebar closed, enable in Settings. </p>",
-
         "gs_md_search_title": "### 🔎 Search",
         "gs_input_exclude": "Exclude",
         "gs_input_search_help": "Use spaces to separate multiple keywords and search together to filter out the screens where these keywords appear at the same time. Window titles can also be used as keywords. If you want to search for a continuous sentence, use '-' instead of a space to connect words, such as searching for 'i-love-you' instead of 'i love you'.",
@@ -75,7 +70,6 @@
         "gs_text_upload_img": "Select image",
         "gs_text_upload_img_help": "The embedding model tends to search based on the semantics of the image content rather than matching the characteristics of the image itself.",
         "gs_text_not_install_img_emb": "The Image Embedding module is not enabled or installed. Please go to the settings page to enable it. If there are no relevant options in the settings, please install the image semantic module first. The installation script could be found at the Windrecorder directory: extension\\install_img_embedding_module\\install_img_embedding_module.bat",
-
         "stat_md_month_title": "### 🌖 Monthly Statistics",
         "stat_md_year_title": "### 🎏 {stat_year_title} Statistics",
         "stat_md_memory_title": "### 🧩 Memory Summary",
@@ -91,7 +85,6 @@
         "stat_btn_generate_update_ai_poem": "Generate Monthly Poem",
         "stat_text_generating_ai_poem": "Generating, the daily generation time takes about 5~15s (depending on the speed of the language model)...",
         "stat_text_custom_lightbox": "You can create custom lightbox images using `extension\\create_custom_lightbox_thumbnail_image`",
-
         "lab_title": "### ⚗️ Lab Features",
         "lab_title_image_semantic_index": "#### Image Embedding Index",
         "lab_tip_image_semantic_index_not_install": "This feature allows you to search for images by text description.\nTo use image semantic search, you need to install the extension module located at extension/install_img_embedding_module.",
@@ -116,7 +109,6 @@
         "lab_text_generating_tags": "Generating tags... \nDepending on the LLM service, it may take 5~20 seconds.",
         "lab_text_generating_tags_fail": "Failed to generate tags: {plain_text}",
         "lab_btn_open_LLM_search_and_summary": "Search and summarize using natural language (Open Extension/LLM_search_and_summary)",
-
         "rs_text_need_to_restart_after_save_setting": "After saving the settings on this page, you need to restart 'Windrecorder' to take effect.",
         "rs_md_title": "### 📼 Recording & Video Storage",
         "rs_md_record_setting_title": "#### Recording options",
@@ -174,7 +166,6 @@
         "rs_option_energy_saving_instantly": "Immediately when the clip finished",
         "rs_option_energy_saving_plug": "Immediately, but only when plugged in (for laptop only)",
         "rs_option_energy_saving_idle": "Only when the computer is idle and plugged in",
-
         "set_md_title": "### ⚙️ Settings",
         "set_md_index_db": "#### Database Index\n",
         "set_checkbox_shutdown_after_updated": "Shutdown after indexed",
@@ -187,10 +178,10 @@
         "set_md_ocr_ignore_area_help": "Enter number as percentage, i.e., '6' == 6%. This option allows to ignore elements at the edges of the screen during OCR, such as browser tabs, Windows Start Menu, in-page advertisements, etc. When recording only the foreground window, this option masks each window proportionally.",
         "set_toggle_use_screenshot_as_refer": "Use current display as reference",
         "set_text_choose_displays": "Choose displays",
-        "set_text_top_padding":"Top Padding",
-        "set_text_bottom_padding":"Bottom Padding",
-        "set_text_left_padding":"Left Padding",
-        "set_text_right_padding":"Right Padding",
+        "set_text_top_padding": "Top Padding",
+        "set_text_bottom_padding": "Bottom Padding",
+        "set_text_left_padding": "Left Padding",
+        "set_text_right_padding": "Right Padding",
         "set_checkbox_enable_3_columns_in_oneday": "Daily - Use center three-column layout",
         "set_help_enable_3_columns_in_oneday": "The three-column layout is suitable for larger webui display devices and can provide more information and center the traceback screen. The default two-column layout is suitable for smaller webui display devices.",
         "set_checkbox_use_similar_zh_char_to_search": "Use Chinese similar characters for searching",
@@ -199,17 +190,17 @@
         "set_input_wordcloud_filter_help": "Some UI keywords may persistently appear, resulting in higher frequency in the data. Here, you can exclude them from the word cloud's statistics.",
         "set_input_oneday_timeline_thumbnail_num": "Daily - timeline's thumbnails amount",
         "set_input_oneday_timeline_thumbnail_num_help": "If you want the thumbnail density in Daily timelines to be higher, you can increase this value.",
-        "set_text_video_not_index":"There are {nocred_count} videos waiting to be indexed. Expected time: <{timeCostStr}>. (There are {count} files on disk.)",
-        "set_text_no_video_need_index":"No new videos need indexing at the moment.  (There are {count} files on disk.)",
-        "set_text_one_video_to_index":"1 video is being recorded, no new videos need indexing at the moment.  (There are {count} files on disk.)",
-        "set_text_some_video_will_be_index":"There are {nocred_count} videos that will be indexed automatically. (There are {count} files on disk.)",
+        "set_text_video_not_index": "There are {nocred_count} videos waiting to be indexed. Expected time: <{timeCostStr}>. (There are {count} files on disk.)",
+        "set_text_no_video_need_index": "No new videos need indexing at the moment.  (There are {count} files on disk.)",
+        "set_text_one_video_to_index": "1 video is being recorded, no new videos need indexing at the moment.  (There are {count} files on disk.)",
+        "set_text_some_video_will_be_index": "There are {nocred_count} videos that will be indexed automatically. (There are {count} files on disk.)",
         "set_btn_update_db_manual": "✦ Manually update database",
         "set_text_updating_db": "Updating database, please do not operate or refresh the page. Estimated time required: {estimate_time_str}",
         "set_text_db_updated_successful": "Database updated successfully! Time: {timeCostStr}",
         "set_btn_got_it": "Got it!",
         "set_md_gui": "#### Interface\n",
         "set_md_auto_maintain": "#### Automatic maintenance",
-        "set_input_video_hold_days":"Video file retention days",
+        "set_input_video_hold_days": "Video file retention days",
         "set_input_max_num_search_page": "In global search, maximum number of results per page",
         "set_update_latest": "Already up to date.",
         "set_update_checking": "Checking for updates...",
@@ -231,7 +222,6 @@
         "set_checkbox_reduce_same_content_at_different_time": "When the same content is shown at different time points in a video slice, only the first occurrence is recorded.",
         "set_checkbox_recycle_deleted_files": "When needing to delete files, put them in the Recycle Bin instead of deleting it directly.",
         "set_help_recycle_deleted_files": "Windrecorder generates temporary videos or screenshots when running. For data safety, it put the discarded data into the recycle bin by default instead of deleting it directly. The system recycle bin will be automatically cleaned up regularly. If your disk capacity is low or you want to delete the discarded data directly, please turn off this option. All file deletion operations will be logged in cache\\logs.",
-
         "qs_header_1": "Weclome to Windrecorder {__version__}",
         "qs_header_2": "Thanks for downloading! This Quick Wizard will help you set it up. Setting still can be adjusted in app afterwards.",
         "qs_la_text_same_as_previous": "The interface language remains the same as before: English",
@@ -266,19 +256,21 @@
         "qs_record_mode_set_to": "Recording mode is set to:",
         "qs_record_auto_set": "The resolution of the display will be automatically recognized each time the screen is recorded, without additional settings.",
         "qs_ocr_benchmark_testcase": "Test language: {lang}\n{indentation}Test case: {test_set}",
-        "qs_ocr_benchmark_tabletitle": ["OCR engine", "Single image recognition time (sec)", "Accuracy"],
+        "qs_ocr_benchmark_tabletitle": [
+            "OCR engine",
+            "Single image recognition time (sec)",
+            "Accuracy"
+        ],
         "qs_ocr_benchmark_warning": "* Please note that the time taken for each image recognition by {ocr_engines} may exceed the current screenshot interval {screenshot_interval_second}s, which may cause delays in recording. It is recommended to set the screenshot interval to more than twice the single image recognition time if these OCR engines are used. (When using Flexible Screenshot mode)",
-
         "qs_et_describe": "Windrecorder also provides some extension functions, which you can later install/use in the extension directory.",
         "qs_end_describe": "Congratulations! You have completed all initial settings. Don't worry, you can adjust the settings anytime in the app! \n\nNow, you can open [start_app.bat] in the directory to start using it. \n",
         "qs_end_slogan": "> Capture and preserve the fleeting moments of the wind, as seen through your eyes.",
         "qs_end_feedback": "> Encountered a problem or have suggestions? Feel free to submit issues and PRs at\n   https://github.com/yuka-friends/Windrecorder",
-
         "tray_add_flag_mark_note_for_now": "🚩 Add mark for now",
         "tray_webui_start": "🦝 Start Search/Setting webui",
-    "tray_webui_next_start": "✨ Start new WebUI (shadcn)",
-    "tray_webui_next_exit": "✨ Stop new WebUI",
-    "tray_webui_next_address": "✨ Browser {address_port} for new WebUI",
+        "tray_webui_next_start": "✨ Start new WebUI (shadcn)",
+        "tray_webui_next_exit": "✨ Stop new WebUI",
+        "tray_webui_next_address": "✨ Browser {address_port} for new WebUI",
         "tray_webui_exit": "🦝 Stop Search/Settings webui service",
         "tray_webui_address": "🦝 Browser {address_port} to access webui",
         "tray_webui_address_network": "      LAN address: {address_port}",
@@ -295,12 +287,10 @@
         "tray_tip_record": "Windrecorder - Recording",
         "tray_tip_record_pause": "Windrecorder - Recording Pause",
         "tray_text_already_run": "Another Windrecorder is running in system tray.",
-
         "flag_text_mark_added": "Time mark added.",
         "flag_input_note": "Note:",
         "flag_btn_remove_mark": "Remove mark",
         "flag_btn_add_note": "Add note",
-
         "lb_text_generating": "Generating image, please wait...",
         "lb_text_month_range": "Approximate month range",
         "lb_text_exact_date": "Exact date range",
@@ -317,7 +307,6 @@
         "lb_btn_create_img": "Create image",
         "lb_text_create_img_instruction": "Generated results can be found in the folder {cache_dir}.",
         "lb_text_title": "#### 📔 Custom Lightbox Generator",
-
         "bg_text_no_image": "No image selected",
         "bg_text_disable_bg": "Custom background image is disabled",
         "bg_title": "### 🖼️ Custom webui background image",
@@ -326,7 +315,6 @@
         "bg_btn_set_bg": "Set as background image",
         "bg_btn_preview": "Preview effect",
         "bg_text_not_existed": "Custom background image does not exist {custom_background_filepath}, the background image has been disabled.",
-
         "natural_search_title": "Natural Language Search",
         "natural_search_caption": "Ask Windrecorder to find moments using everyday language (Requires configured OpenAI API).",
         "natural_search_input_label": "What are you looking for?",
@@ -360,19 +348,26 @@
         "natural_search_showing_first": "Showing the earliest relevant moment found.",
         "natural_search_showing_last": "Showing the latest relevant moment found.",
         "natural_search_specific_occurrence_found": "Found the {occurrence} relevant moment.",
-        "info_no_text_to_summarize": "No text content found in the relevant snippets to summarize."
+        "info_no_text_to_summarize": "No text content found in the relevant snippets to summarize.",
+        "webui_tip_no_password_public_title": "No access password set",
+        "webui_tip_no_password_public_desc": "You are not on localhost / a private network address. Without a password, anyone who can reach this WebUI may access your data. Set a password in Settings, or bind the API to 127.0.0.1 only.",
+        "webui_tip_go_settings": "Open Settings",
+        "webui_pwd_card_title": "WebUI access password",
+        "webui_pwd_card_desc": "Optional. Leave empty to keep current password. Clear and save to disable. Protects the API entry only — data on disk is not encrypted.",
+        "webui_pwd_status_on": "Password is enabled",
+        "webui_pwd_status_off": "Password is disabled (default)",
+        "webui_pwd_placeholder": "New password (leave empty to keep)",
+        "webui_pwd_clear_hint": "To disable: clear the field, check “Remove password”, then save.",
+        "webui_pwd_remove": "Remove password on save"
     },
-  
-    "sc": {  
+    "sc": {
         "main_title": "#### 🦝 捕风记录仪",
-        
         "tab_name_oneday": "一天之时",
         "tab_name_search": "全局搜索",
         "tab_name_stat": "记忆摘要",
         "tab_name_lab": "实验室",
         "tab_name_recording": "录制与视频存储",
         "tab_name_setting": "设置",
-
         "text_search_keyword": "关键词搜索",
         "text_search_daterange": "日期范围",
         "text_search_not_found": "没有找到 \"{search_content}\"。",
@@ -380,11 +375,9 @@
         "utils_toast_setting_saved": "已应用更改。",
         "footer_info": "最早的数据时间：**{first_record_time_str}**，最新的数据时间： **{latest_record_time_str}**， 数据库记录了行数： **{latest_db_records}**，视频文件占用空间： **{videos_file_size} GB** ({videos_files_count} 个视频文件)",
         "footer_info_help": "统计更新可能存在最多两天的延迟。",
-
-        "text_welcome_to_windrecorder":"欢迎使用 Windrecorder！",
+        "text_welcome_to_windrecorder": "欢迎使用 Windrecorder！",
         "text_updating_month_stat": "更新本月统计中……",
         "text_updating_yearly_stat": "更新本年统计中……",
-        
         "oneday_title": "### 🖼️ 一天之时",
         "oneday_btn_yesterday": "← 前一天",
         "oneday_btn_tomorrow": "后一天 →",
@@ -414,7 +407,6 @@
         "oneday_ls_text_no_wintitle_stat": "<p align='left' style='color:rgba(0,0,0,.3)'> 没有当日页面浏览数据 </p>",
         "oneday_ls_text_no_wintitle_stat_momnth": "<p align='left' style='color:rgba(0,0,0,.3)'> 没有当月页面浏览数据 </p>",
         "oneday_ls_text_disable_leftside": "<p align='center' style='color:rgba(0,0,0,.3)'> 工具栏已关闭，可前往设置页开启。 </p>",
-
         "gs_md_search_title": "### 🔎 搜索",
         "gs_input_exclude": "排除",
         "gs_input_search_help": "可使用空格分隔多个关键词一起搜索，以筛选出同时出现这些关键词的画面。窗口标题名也可以作为关键词。当想搜索连续的整句内容时，可以使用'-'代替空格连接单词，比如搜索 'i-love-you' 而不是 'i love you'。",
@@ -439,7 +431,6 @@
         "gs_text_upload_img": "选择图片",
         "gs_text_upload_img_help": "嵌入模型倾向根据图像内容语义进行搜索，而非匹配图像本身特征。",
         "gs_text_not_install_img_emb": "未启用或未安装图像语义检索模块，请前往设置页启用。若设置中无相关选项，请先安装图像语义模块。安装脚本位于 Windrecorder 目录下：extension\\install_img_embedding_module\\install_img_embedding_module.bat",
-
         "stat_md_month_title": "### 🌖 当月数据统计",
         "stat_md_year_title": "### 🎏 {stat_year_title} 记录",
         "stat_md_memory_title": "### 🧩 记忆摘要",
@@ -455,7 +446,6 @@
         "stat_btn_generate_update_ai_poem": "生成本月诗歌",
         "stat_text_generating_ai_poem": "生成中，每日生成时间大概需要 5~15s（视语言模型速度而定）……",
         "stat_text_custom_lightbox": "你可以使用 `extension\\create_custom_lightbox_thumbnail_image` 创建自定义光箱图片",
-
         "lab_title": "### ⚗️ 实验室特性",
         "lab_title_image_semantic_index": "#### 图像嵌入索引",
         "lab_tip_image_semantic_index_not_install": "此项功能可以让你通过文本描述、以图搜图来搜寻对应的画面。\n为了使用图像语义搜索，需要先安装位于 extension/install_img_embedding_module 的扩展模块。",
@@ -480,7 +470,6 @@
         "lab_text_generating_tags": "生成中... \n取决于语言模型，这可能需要 5~20 秒。",
         "lab_text_generating_tags_fail": "生成标签失败: {plain_text}",
         "lab_btn_open_LLM_search_and_summary": "使用自然语言搜索并总结（打开插件：LLM_search_and_summary）",
-
         "rs_text_need_to_restart_after_save_setting": "本页的设置在保存后，需重启 「捕风记录仪」 才能生效。",
         "rs_md_title": "### 📼 录制与视频存储",
         "rs_md_record_setting_title": "#### 录制选项",
@@ -538,7 +527,6 @@
         "rs_option_energy_saving_instantly": "在片段录制完时立即合成",
         "rs_option_energy_saving_plug": "立即合成，但仅在插入电源时（仅笔记本电脑适用）",
         "rs_option_energy_saving_idle": "仅在电脑空闲、且接入电源时",
-
         "set_md_title": "### ⚙️ 设置",
         "set_md_index_db": "#### 数据库索引\n",
         "set_checkbox_shutdown_after_updated": "更新完毕后关闭计算机",
@@ -551,10 +539,10 @@
         "set_md_ocr_ignore_area_help": "填入数字为百分比，比如'6' == 6%。此选项可以在 OCR 时忽略屏幕四边的元素，如浏览器的标签栏、Windows 的开始菜单、网页内的花边广告信息等。当仅录制前台窗口时，此选项会依照比例遮罩每个窗口。",
         "set_toggle_use_screenshot_as_refer": "用当前屏幕截图参照",
         "set_text_choose_displays": "选择显示器",
-        "set_text_top_padding":"上边框",
-        "set_text_bottom_padding":"下边框",
-        "set_text_left_padding":"左边框",
-        "set_text_right_padding":"右边框",
+        "set_text_top_padding": "上边框",
+        "set_text_bottom_padding": "下边框",
+        "set_text_left_padding": "左边框",
+        "set_text_right_padding": "右边框",
         "set_checkbox_enable_3_columns_in_oneday": "「一天之时」使用三栏居中布局",
         "set_help_enable_3_columns_in_oneday": "三栏布局适合较大的 webui 显示设备，可以提供更多信息、让回溯画面居中。默认双栏布局适合较小的 webui 显示设备。",
         "set_checkbox_use_similar_zh_char_to_search": "使用中文形近字进行搜索",
@@ -563,17 +551,17 @@
         "set_input_wordcloud_filter_help": "有一些 UI 的词语会常驻显示，从而在数据中出现频次更高，这里可以将它们排除在词云的统计范围之外。",
         "set_input_oneday_timeline_thumbnail_num": "「一天之时」时间轴的横向缩略图数量",
         "set_input_oneday_timeline_thumbnail_num_help": "如果希望「一天之时」时间轴缩略图密度更高，可以提高该值。",
-        "set_text_video_not_index":"有 {nocred_count} 个视频等待索引，预计用时 <{timeCostStr}。 (磁盘上有 {count} 个文件。)",
-        "set_text_no_video_need_index":"暂时没有新视频需要索引啦。  (磁盘上有 {count} 个文件。)",
-        "set_text_one_video_to_index":"有 1 个视频正在录制中，暂时没有新视频需要索引啦。  (磁盘上有 {count} 个文件。)",
-        "set_text_some_video_will_be_index":"有 {nocred_count} 个视频将会被自动索引。 (磁盘上有 {count} 个文件。)",
+        "set_text_video_not_index": "有 {nocred_count} 个视频等待索引，预计用时 <{timeCostStr}。 (磁盘上有 {count} 个文件。)",
+        "set_text_no_video_need_index": "暂时没有新视频需要索引啦。  (磁盘上有 {count} 个文件。)",
+        "set_text_one_video_to_index": "有 1 个视频正在录制中，暂时没有新视频需要索引啦。  (磁盘上有 {count} 个文件。)",
+        "set_text_some_video_will_be_index": "有 {nocred_count} 个视频将会被自动索引。 (磁盘上有 {count} 个文件。)",
         "set_btn_update_db_manual": "✦ 手动更新数据库",
         "set_text_updating_db": "更新数据库中，请不要操作或刷新页面。预估所需时间：{estimate_time_str}",
         "set_text_db_updated_successful": "数据库更新成功！用时： {timeCostStr}",
         "set_btn_got_it": "我知道了",
         "set_md_gui": "#### 界面\n",
         "set_md_auto_maintain": "#### 自动化维护",
-        "set_input_video_hold_days":"视频文件保留天数",
+        "set_input_video_hold_days": "视频文件保留天数",
         "set_input_max_num_search_page": "全局搜索中，每页显示结果的最大数量",
         "set_update_latest": "当前已是最新版本。",
         "set_update_checking": "检查更新中……",
@@ -595,7 +583,6 @@
         "set_checkbox_reduce_same_content_at_different_time": "当视频片段内有相同内容显示在不同时间点，只记录第一次出现时间点。",
         "set_checkbox_recycle_deleted_files": "当需要删除文件时，将其放到回收站、而非直接删除。",
         "set_help_recycle_deleted_files": "捕风记录仪在运行时产生临时视频或截图。为了数据安全，我们默认将废弃数据放到回收站、而非直接删除，由系统回收站定期自动清理。如果你的磁盘容量较低、或希望直接删除废弃数据，请关闭此选项。所有文件删除操作将记录在 cache\\logs 中。",
-
         "qs_header_1": "欢迎使用 捕风记录仪 {__version__}",
         "qs_header_2": "感谢下载使用！本向导将协助你完成基础配置项。不用担心，所有选项之后都可以再次调整。",
         "qs_la_text_same_as_previous": "界面语言保持与先前一致的：简体中文",
@@ -630,20 +617,21 @@
         "qs_record_mode_set_to": "录制模式设置为：",
         "qs_record_auto_set": "显示器的分辨率将在每次录屏时自动识别，无需额外设定。",
         "qs_ocr_benchmark_testcase": "测试语言：{lang}\n{indentation}测试用例：{test_set}",
-        "qs_ocr_benchmark_tabletitle": ["OCR 引擎", "单图识别用时（秒）", "准确率"],
+        "qs_ocr_benchmark_tabletitle": [
+            "OCR 引擎",
+            "单图识别用时（秒）",
+            "准确率"
+        ],
         "qs_ocr_benchmark_warning": "* 请注意，{ocr_engines} 的每单图识别用时可能会超过当前屏幕截图间隔时间 {screenshot_interval_second}s，这可能会导致记录出现延迟。如果使用这些识别引擎，建议将截图间隔时长设定为单图识别时间的两倍以上。（在使用 灵活截图模式 时）",
-
-
         "qs_et_describe": "捕风记录仪 还提供了一些扩展功能，你可以稍后在 extension 目录下安装/使用。",
         "qs_end_describe": "恭喜！你已完成所有初始设定。别担心，你可以随时在应用内调整设置！\n\n现在，你可以打开目录下的 【start_app.bat】 来开始使用啦。\n",
         "qs_end_slogan": "> 一起捕捉贮藏风一般掠过的、你的目之所见。",
         "qs_end_feedback": "> 遇到问题、想反馈建议？欢迎提交 issue 与 PR: \n   https://github.com/yuka-friends/Windrecorder",
-        
         "tray_add_flag_mark_note_for_now": "🚩 为现在时间添加标记",
         "tray_webui_start": "🦝 启动搜索/设置界面",
-    "tray_webui_next_start": "✨ 启动新 WebUI (shadcn)",
-    "tray_webui_next_exit": "✨ 关闭新 WebUI",
-    "tray_webui_next_address": "✨ 浏览器访问 {address_port} 进入新界面",
+        "tray_webui_next_start": "✨ 启动新 WebUI (shadcn)",
+        "tray_webui_next_exit": "✨ 关闭新 WebUI",
+        "tray_webui_next_address": "✨ 浏览器访问 {address_port} 进入新界面",
         "tray_webui_exit": "🦝 关闭搜索/设置界面",
         "tray_webui_address": "🦝 浏览器访问 {address_port} 进入页面",
         "tray_webui_address_network": "      局域网访问：{address_port}",
@@ -660,12 +648,10 @@
         "tray_tip_record": "捕风记录仪 - 正在记录",
         "tray_tip_record_pause": "捕风记录仪 - 暂停记录",
         "tray_text_already_run": "「捕风记录仪」已在系统托盘中运行。",
-
         "flag_text_mark_added": "已添加此时的标记。",
         "flag_input_note": "备注：",
         "flag_btn_remove_mark": "移除标记",
         "flag_btn_add_note": "添加备注",
-
         "lb_text_generating": "正在生成图片，请稍等",
         "lb_text_month_range": "大致月份范围",
         "lb_text_exact_date": "精确日期范围",
@@ -682,7 +668,6 @@
         "lb_btn_create_img": "创建图片",
         "lb_text_create_img_instruction": "生成结果可以在文件夹 {cache_dir} 下找到。",
         "lb_text_title": "#### 📔 自定义光箱生成器",
-
         "bg_text_no_image": "没有选择图片",
         "bg_text_disable_bg": "已关闭自定义背景图",
         "bg_title": "### 🖼️ 自定义 webui 背景图片",
@@ -691,7 +676,6 @@
         "bg_btn_set_bg": "设置为背景图片",
         "bg_btn_preview": "预览效果",
         "bg_text_not_existed": "自定义背景图不存在 {custom_background_filepath}，已停用背景图。",
-
         "natural_search_title": "自然语言搜索",
         "natural_search_caption": "用日常语言让 Windrecorder 查找记忆片段 (需要在设置中配置 OpenAI API)。",
         "natural_search_input_label": "你在找什么？",
@@ -725,20 +709,26 @@
         "natural_search_showing_first": "已显示找到的最早的相关时刻。",
         "natural_search_showing_last": "已显示找到的最近的相关时刻。",
         "natural_search_specific_occurrence_found": "找到了{occurrence}个相关时刻。",
-        "info_no_text_to_summarize": "在相关片段中未找到可供摘要的文本内容。"
-        
+        "info_no_text_to_summarize": "在相关片段中未找到可供摘要的文本内容。",
+        "webui_tip_no_password_public_title": "尚未设置访问密码",
+        "webui_tip_no_password_public_desc": "当前访问地址不是 localhost / 内网地址。未设置密码时，能访问该 WebUI 的人可能看到你的数据。请在「设置」中设置密码，或仅将 API 绑定到 127.0.0.1。",
+        "webui_tip_go_settings": "前往设置",
+        "webui_pwd_card_title": "WebUI 访问密码",
+        "webui_pwd_card_desc": "可选。留空并保存表示保持现有密码；勾选移除后保存可关闭密码。仅保护 WebUI/API 入口，不会加密磁盘数据。",
+        "webui_pwd_status_on": "密码已启用",
+        "webui_pwd_status_off": "密码未启用（默认）",
+        "webui_pwd_placeholder": "新密码（留空则保持不变）",
+        "webui_pwd_clear_hint": "若要关闭密码：勾选「保存时移除密码」后点击保存。",
+        "webui_pwd_remove": "保存时移除密码"
     },
-
-    "ja": {  
+    "ja": {
         "main_title": "#### 🦝 Windrecorder",
-        
         "tab_name_oneday": "一日",
         "tab_name_search": "グローバルキーワード検索",
         "tab_name_stat": "メモリサマリー",
         "tab_name_lab": "ラボ",
         "tab_name_recording": "録画とビデオストレージ",
         "tab_name_setting": "設定",
-
         "text_search_keyword": "キーワード検索",
         "text_search_daterange": "日付範囲",
         "text_search_not_found": "\"{search_content}\" が見つかりませんでした。",
@@ -746,11 +736,9 @@
         "utils_toast_setting_saved": "変更が適用されました。",
         "footer_info": "最も早いデータの時間：**{first_record_time_str}** , 最新のデータ時間： **{latest_record_time_str}** ,データベースのレコード数： **{latest_db_records}** ,ビデオファイルの使用スペース： **{videos_file_size} GB** ({videos_files_count} 個のビデオファイル)",
         "footer_info_help": "統計情報の更新には最大 2 日の遅れが生じる可能性があります。",
-
-        "text_welcome_to_windrecorder":"Windrecorderへようこそ！",
+        "text_welcome_to_windrecorder": "Windrecorderへようこそ！",
         "text_updating_month_stat": "今月の統計を更新しています...",
         "text_updating_yearly_stat": "今年の統計を更新しています...",
-        
         "oneday_title": "### 🖼️ 一日",
         "oneday_btn_yesterday": "← 前の日",
         "oneday_btn_tomorrow": "次の日 →",
@@ -780,7 +768,6 @@
         "oneday_ls_text_no_wintitle_stat": "<p align='left' style='color:rgba(0,0,0,.3)'> その日のページビュー データはありません </p>",
         "oneday_ls_text_no_wintitle_stat_momnth": "<p align='left' style='color:rgba(0,0,0,.3)'> その月のページビュー データはありません </p>",
         "oneday_ls_text_disable_leftside": "<p align='center' style='color:rgba(0,0,0,.3)'> ツールバーは閉じています。ツールバーを開くには、設定ページに移動できます。</p> ",
-
         "gs_md_search_title": "### 🔎 検索",
         "gs_input_exclude": "除外",
         "gs_input_search_help": "スペースを使用して複数のキーワードを区切り、まとめて検索して、これらのキーワードが同時に表示される画面を除外できます。ウィンドウタイトル名もキーワードとして使用できます。連続した文を検索する場合は、スペースの代わりに「-」を使用して単語を接続できます。たとえば、「i love you」の代わりに「i-love-you」を検索します。",
@@ -805,7 +792,6 @@
         "gs_text_upload_img": "画像を選択",
         "gs_text_upload_img_help": "埋め込みモデルは、画像自体の特性と一致させるのではなく、画像コンテンツのセマンティクスに基づいて検索する傾向があります。",
         "gs_text_not_install_img_emb": "イメージ セマンティック取得モジュールが有効になっていない、またはインストールされていません。設定ページに移動して有効にしてください。設定に関連するオプションがない場合は、最初にイメージ セマンティック モジュールをインストールしてください。インストール スクリプトは次の場所にあります。 Windrecorder ディレクトリ: extension\\install_img_embedding_module\\install_img_embedding_module.bat",
-        
         "stat_md_month_title": "### 🌖 今月のデータ統計",
         "stat_md_year_title": "### 🎏 {stat_year_title} の記録",
         "stat_md_memory_title": "### 🧩 メモリの要約",
@@ -821,7 +807,6 @@
         "stat_btn_generate_update_ai_poem": "今月の詩を生成",
         "stat_text_generated_ai_poem": "生成中、毎日の生成時間は約 5 ～ 15 秒かかります (言語モデルの速度に応じて)...",
         "stat_text_custom_lightbox": "`extension\\create_custom_lightbox_thumbnail_image` を使用してカスタム ライトボックス画像を作成できます",
-
         "lab_title": "### ⚗️ 研究室の機能",
         "lab_title_image_semantic_index": "#### 画像埋め込みインデックス",
         "lab_tip_image_semantic_index_not_install": "この機能を使用すると、テキストの説明と画像検索を通じて、対応する画面を検索できます。\n画像セマンティック検索を使用するには、最初に extension/install_img_embedding_module にある拡張モジュールをインストールする必要があります。",
@@ -846,7 +831,6 @@
         "lab_text_generating_tags": "タグを生成しています... \nLLM サービスによっては、5～20 秒かかる場合があります。",
         "lab_text_generating_tags_fail": "タグを生成できませんでした: {plain_text}",
         "lab_btn_open_LLM_search_and_summary": "自然言語を使用して検索および要約する（プラグインを開く: LLM_search_and_summary）",
-
         "rs_text_need_to_restart_after_save_setting": "このページの設定を保存した後、Windrecorder を再起動する必要があります。",
         "rs_md_title": "### 📼 録画とビデオストレージ",
         "rs_md_record_setting_title": "#### 録画オプション",
@@ -904,7 +888,6 @@
         "rs_option_energy_saving_instantly": "クリップが記録されたらすぐに合成します",
         "rs_option_energy_saving_plug": "すぐに合成しますが、接続されている場合のみ (ラップトップのみ)",
         "rs_option_energy_saving_idle": "コンピューターがアイドル状態で電源に接続されている場合のみ",
-        
         "set_md_title": "### ⚙️ 設定",
         "set_md_index_db": "#### データベースインデックス\n",
         "set_checkbox_shutdown_after_updated": "更新が完了したらコンピューターをシャットダウン",
@@ -917,10 +900,10 @@
         "set_md_ocr_ignore_area_help": "数字はパーセンテージです。例えば、「6」は 6% です。このオプションにより、OCR 時に画面の四辺の要素が無視されます。これには、ブラウザのタブバー、Windows のスタートメニュー、Web ページ内のボーダー広告情報などがあります。前景ウィンドウのみを記録する場合、このオプションは各ウィンドウを比例してマスクします。",
         "set_toggle_use_screenshot_as_refer": "現在のスクリーンショットを参照として使用する",
         "set_text_choose_displays": "ディスプレイを選択",
-        "set_text_top_padding":"上マージン",
-        "set_text_bottom_padding":"下マージン",
-        "set_text_left_padding":"左マージン",
-        "set_text_right_padding":"右マージン",
+        "set_text_top_padding": "上マージン",
+        "set_text_bottom_padding": "下マージン",
+        "set_text_left_padding": "左マージン",
+        "set_text_right_padding": "右マージン",
         "set_checkbox_enable_3_columns_in_oneday": "「One Day」では 3 列の中央レイアウトが使用されます",
         "set_help_enable_3_columns_in_oneday": "3 列レイアウトは、大型の WebUI 表示デバイスに適しており、より多くの情報を提供し、トレースバック画面を中央に配置できます。デフォルトの 2 列レイアウトは、小型の WebUI 表示デバイスに適しています。",
         "set_checkbox_use_similar_zh_char_to_search": "中国語の類似文字を検索に使用する",
@@ -929,17 +912,17 @@
         "set_input_wordcloud_filter_help": "いくつかのUIの単語は常に表示されるため、データ中でより頻繁に現れます。ここでは、それらをワードクラウドの統計範囲外に除外することができます。",
         "set_input_oneday_timeline_thumbnail_num": "「一日のタイムライン」の横方向サムネイル数",
         "set_input_oneday_timeline_thumbnail_num_help": "「一日のタイムライン」のサムネイル密度を高めたい場合は、この値を増やすことができます。",
-        "set_text_video_not_index":"{nocred_count} 個のビデオがインデックス作業待ちです。予想所要時間：<{timeCostStr}>。 （ディスク上には {count} 個のファイルがあります。）",
-        "set_text_no_video_need_index":"新しいビデオは現在インデックスする必要がありません。 （ディスク上には {count} 個のファイルがあります。）",
-        "set_text_one_video_to_index":"1 つのビデオが録画中であり、新しいビデオは現在インデックスする必要がありません。 （ディスク上には {count} 個のファイルがあります。）",
-        "set_text_some_video_will_be_index":"{nocred_count} 個のビデオが自動的にインデックスされます。 （ディスク上には {count} 個のファイルがあります。）",
+        "set_text_video_not_index": "{nocred_count} 個のビデオがインデックス作業待ちです。予想所要時間：<{timeCostStr}>。 （ディスク上には {count} 個のファイルがあります。）",
+        "set_text_no_video_need_index": "新しいビデオは現在インデックスする必要がありません。 （ディスク上には {count} 個のファイルがあります。）",
+        "set_text_one_video_to_index": "1 つのビデオが録画中であり、新しいビデオは現在インデックスする必要がありません。 （ディスク上には {count} 個のファイルがあります。）",
+        "set_text_some_video_will_be_index": "{nocred_count} 個のビデオが自動的にインデックスされます。 （ディスク上には {count} 個のファイルがあります。）",
         "set_btn_update_db_manual": "✦ データベースを手動で更新する",
         "set_text_updating_db": "データベースを更新中です。操作やページのリフレッシュはしないでください。更新プロセスはバックグラウンドのコマンドラインインターフェースで確認できます。予想所要時間：{estimate_time_str}",
         "set_text_db_updated_successful": "データベースの更新が成功しました！所要時間：{timeCostStr}",
         "set_btn_got_it": "了解しました",
         "set_md_gui": "#### インタフェース\n",
         "set_md_auto_maintain": "#### 自動メンテナンス",
-        "set_input_video_hold_days":"ビデオファイルの保持日数",
+        "set_input_video_hold_days": "ビデオファイルの保持日数",
         "set_input_max_num_search_page": "グローバル検索で表示される各ページの最大結果数",
         "set_update_latest": "現在のバージョンは最新です。",
         "set_update_checking": "更新を確認中...",
@@ -961,7 +944,6 @@
         "set_checkbox_reduce_same_content_at_different_time": "ビデオ スライスに同じコンテンツが異なる時点で表示されている場合、最初のコンテンツのみが記録されます。",
         "set_checkbox_recycle_deleted_files": "ファイルを削除する必要がある場合は、直接削除するのではなく、ごみ箱に入れてください。",
         "set_help_recycle_deleted_files": "Windrecorder は実行中に一時的なビデオまたはスクリーンショットを生成します。データのセキュリティのため、破棄されたデータは直接削除するのではなく、デフォルトでごみ箱に入れられ、システムのごみ箱は定期的に自動的にクリーンアップされます。ディスク容量が少ない場合や、古いデータを直接削除したい場合は、このオプションをオフにしてください。すべてのファイル削除操作は cache\\logs に記録されます。",
-
         "qs_header_1": "Windrecorder {__version__} へようこそ",
         "qs_header_2": "ダウンロードしていただきありがとうございます。このクイック ウィザードはセットアップに役立ちます。設定は後でアプリで調整できます。",
         "qs_la_text_same_as_previous": "インターフェイス言語は以前と同じで日本語です。",
@@ -1000,14 +982,17 @@
         "qs_record_mode_set_to": "記録モードは次のように設定されています:",
         "qs_record_auto_set": "モニターの解像度は画面が録画されるたびに自動的に認識されるため、追加の設定は必要ありません。",
         "qs_ocr_benchmark_testcase": "テスト言語: {lang}\n{indentation}テスト ケース: {test_set}",
-        "qs_ocr_benchmark_tabletitle": ["OCR エンジン", "単一画像認識時間 (秒)", "精度率"],
+        "qs_ocr_benchmark_tabletitle": [
+            "OCR エンジン",
+            "単一画像認識時間 (秒)",
+            "精度率"
+        ],
         "qs_ocr_benchmark_warning": "* {ocr_engines} の各単一画像認識時間が現在のスクリーンショット間隔 {screenshot_interval_second}s を超える可能性があり、記録に遅延が生じる可能性があることに注意してください。スクリーンショット間隔の長さを単一画像認識に設定することをお勧めします。 2 倍以上の時間 (フレキシブル スクリーンショット モード使用時)",
-
         "tray_add_flag_mark_note_for_now": "🚩 とりあえずマークを追加",
         "tray_webui_start": "🦝 検索/設定インターフェイスを開始します",
-    "tray_webui_next_start": "✨ 新しい WebUI を開始 (shadcn)",
-    "tray_webui_next_exit": "✨ 新しい WebUI を閉じる",
-    "tray_webui_next_address": "✨ ブラウザで {address_port} を開く (新 UI)",
+        "tray_webui_next_start": "✨ 新しい WebUI を開始 (shadcn)",
+        "tray_webui_next_exit": "✨ 新しい WebUI を閉じる",
+        "tray_webui_next_address": "✨ ブラウザで {address_port} を開く (新 UI)",
         "tray_webui_exit": "🦝 検索/設定インターフェイスを閉じます",
         "tray_webui_address": "🦝 ページに入るにはブラウザから {address_port} にアクセスしてください",
         "tray_webui_address_network": "      Network access: {address_port}",
@@ -1028,7 +1013,6 @@
         "flag_input_note": "メモ:",
         "flag_btn_remove_mark": "マークを削除",
         "flag_btn_add_note": "メモを追加",
-
         "lb_text_generated": "画像を生成中です。お待​​ちください",
         "lb_text_month_range": "おおよその月の範囲",
         "lb_text_exact_date": "正確な日付範囲",
@@ -1045,7 +1029,6 @@
         "lb_btn_create_img": "イメージを作成",
         "lb_text_create_img_instruction": "生成された結果はフォルダー {cache_dir} にあります。",
         "lb_text_title": "#### 📔 カスタム ライト ボックス ジェネレーター",
-
         "bg_text_no_image": "画像が選択されていません",
         "bg_text_disable_bg": "カスタム背景画像がオフになりました",
         "bg_title": "### 🖼️ カスタム Webui 背景画像",
@@ -1053,9 +1036,18 @@
         "bg_btn_remove_bg": "背景画像を削除",
         "bg_btn_set_bg": "背景画像として設定",
         "bg_btn_preview": "プレビュー効果",
-        "bg_text_not_existed": "カスタム背景画像 {custom_background_filepath} が存在しません。背景画像は無効になっています。"
+        "bg_text_not_existed": "カスタム背景画像 {custom_background_filepath} が存在しません。背景画像は無効になっています。",
+        "webui_tip_no_password_public_title": "アクセスパスワード未設定",
+        "webui_tip_no_password_public_desc": "現在の URL は localhost / プライベートネットワークではありません。パスワード未設定の場合、この WebUI に到達できる人がデータにアクセスできる可能性があります。「設定」でパスワードを設定するか、API を 127.0.0.1 のみにバインドしてください。",
+        "webui_tip_go_settings": "設定を開く",
+        "webui_pwd_card_title": "WebUI アクセスパスワード",
+        "webui_pwd_card_desc": "任意。空のまま保存すると現在のパスワードを維持。削除チェック後に保存で無効化。API 入口のみ保護し、ディスク上のデータは暗号化しません。",
+        "webui_pwd_status_on": "パスワード有効",
+        "webui_pwd_status_off": "パスワード無効（デフォルト）",
+        "webui_pwd_placeholder": "新しいパスワード（空なら維持）",
+        "webui_pwd_clear_hint": "無効にする場合は「保存時にパスワードを削除」にチェックして保存。",
+        "webui_pwd_remove": "保存時にパスワードを削除"
     },
-
     "lang_map": {
         "en": "English",
         "sc": "简体中文",
