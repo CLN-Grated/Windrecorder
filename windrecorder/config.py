@@ -122,6 +122,7 @@ class Config:
         convert_screenshots_to_vid_energy_saving_mode,
         enable_ocr_str_highlight_indicator,
         recycle_deleted_files,
+        webui_backend="fastapi",
         compress_cpu_threads=None,
         **other_field,
     ) -> None:
@@ -232,6 +233,8 @@ class Config:
         )
         self.enable_ocr_str_highlight_indicator = enable_ocr_str_highlight_indicator
         self.recycle_deleted_files = recycle_deleted_files
+        # fastapi | streamlit — which backend the tray "start webui" prefers; both can coexist
+        self.webui_backend = webui_backend
 
     def set_and_save_config(self, attr: str, value):
         if not hasattr(self, attr):

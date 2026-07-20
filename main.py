@@ -44,9 +44,13 @@ STREAMLIT_OPEN_TIMEOUT = 10  # Streamlit 启动的超时时间，单位为秒
 RECORDING_STOP_TIMEOUT = 5  # 停止录制的超时时间，单位为秒
 
 streamlit_process: Popen | None = None  # 存储 Streamlit 进程的实例，表示是否正在运行 Streamlit Web UI。初始值为 None，表示没有正在运行的进程。
+fastapi_process: Popen | None = None  # 新 WebUI（FastAPI + shadcn frontend）进程
 recording_process: Popen | None = None  # 存储录制进程的实例，表示是否正在进行屏幕录制。初始值为 None，表示没有正在运行的录制进程。
 webui_local_url = ""
 webui_network_url = ""
+fastapi_local_url = ""
+fastapi_network_url = ""
+FASTAPI_OPEN_TIMEOUT = 15
 
 
 def get_tray_icon(state="recording"):
@@ -74,6 +78,10 @@ def open_webui(icon: pystray.Icon, item: pystray.MenuItem):
     webbrowser.open(webui_local_url)
 
 
+def open_fastapi_webui(icon: pystray.Icon, item: pystray.MenuItem):
+    webbrowser.open(fastapi_local_url)
+
+
 # 调用浏览器打开更新日记
 def open_web_changelog(icon: pystray.Icon, item: pystray.MenuItem):
     webbrowser.open("https://github.com/yuka-friends/Windrecorder/blob/main/CHANGELOG.md")
@@ -87,12 +95,37 @@ def setup(icon: pystray.Icon):
         icon.notify(message=_t("tray_notify_text_start_without_record"), title=_t("tray_notify_title_record_pause"))
 
 
-# 启动/停止 webui 服务
+def _wait_url_from_log(log_path: str, timeout: int):
+    """Parse Local/Network URL markers from a process log. Returns (local, network) or (None, network)."""
+    local_url = None
+    network_url = ""
+    time_spent = 0
+    while time_spent < timeout:
+        try:
+            with open(log_path, "r", encoding="utf-8") as f:
+                content = f.read()
+        except FileNotFoundError:
+            content = ""
+        m = STREAMLIT_NETWORK_URL_REGEX.search(content)
+        if m:
+            network_url = m[1]
+        m = STREAMLIT_LOCAL_URL_REGEX.search(content)
+        if m:
+            local_url = m[1]
+            break
+        time.sleep(1)
+        time_spent += 1
+    return local_url, network_url
+
+
+# 启动/停止 Streamlit webui 服务（旧界面，双轨保留）
 def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
     global streamlit_process, webui_local_url, webui_network_url
     if streamlit_process:
         streamlit_process.kill()
         streamlit_process = None
+        webui_local_url = ""
+        webui_network_url = ""
     else:
         with open(WEBUI_STDOUT_PATH, "w", encoding="utf-8") as out, open(WEBUI_STDERR_PATH, "w", encoding="utf-8") as err:
             streamlit_process = Popen(
@@ -111,28 +144,55 @@ def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
                 encoding="utf-8",
                 cwd=PROJECT_ROOT,
             )
-        time_spent = 0  # 记录启动服务以来已等待的时间
-        while time_spent < STREAMLIT_OPEN_TIMEOUT:
-            # 从标准输出中寻找 streamlit 启动的地址
-            with open(WEBUI_STDOUT_PATH, "r", encoding="utf-8") as f:
-                content = f.read()
-            m = STREAMLIT_NETWORK_URL_REGEX.search(content)
-            if m:
-                webui_network_url = m[1]
-            m = STREAMLIT_LOCAL_URL_REGEX.search(content)
-            if m:
-                webui_local_url = m[1]
-                break
-
-            # 若找不到匹配结果，等待后重试
-            time.sleep(1)
-            time_spent += 1
+        local_url, network_url = _wait_url_from_log(WEBUI_STDOUT_PATH, STREAMLIT_OPEN_TIMEOUT)
+        if local_url:
+            webui_local_url = local_url
+            webui_network_url = network_url
         else:
-            # 启动 webui 超时，停止服务
             streamlit_process.kill()
             streamlit_process = None
             icon.notify(
                 f"Webui started timeout, check '{config.log_dir}' for more information. (It takes more than {STREAMLIT_OPEN_TIMEOUT} seconds to launch.)"
+            )
+
+
+# 启动/停止 FastAPI + shadcn 新 WebUI
+def start_stop_fastapi_webui(icon: pystray.Icon, item: pystray.MenuItem):
+    global fastapi_process, fastapi_local_url, fastapi_network_url
+    fastapi_stdout = os.path.join(config.log_dir, "webui_fastapi.log")
+    fastapi_stderr = os.path.join(config.log_dir, "webui_fastapi.err")
+    if fastapi_process:
+        fastapi_process.kill()
+        fastapi_process = None
+        fastapi_local_url = ""
+        fastapi_network_url = ""
+    else:
+        port = utils.find_available_port()
+        with open(fastapi_stdout, "w", encoding="utf-8") as out, open(fastapi_stderr, "w", encoding="utf-8") as err:
+            fastapi_process = Popen(
+                [
+                    sys.executable,
+                    "-u",
+                    "api_server.py",
+                    "--host",
+                    "127.0.0.1",
+                    "--port",
+                    str(port),
+                ],
+                stdout=out,
+                stderr=err,
+                encoding="utf-8",
+                cwd=PROJECT_ROOT,
+            )
+        local_url, network_url = _wait_url_from_log(fastapi_stdout, FASTAPI_OPEN_TIMEOUT)
+        if local_url:
+            fastapi_local_url = local_url
+            fastapi_network_url = network_url
+        else:
+            fastapi_process.kill()
+            fastapi_process = None
+            icon.notify(
+                f"New WebUI started timeout, check '{config.log_dir}/webui_fastapi.*' for more information."
             )
 
 
@@ -194,6 +254,8 @@ def menu_callback():
         new_version = None
     current_version = utils.get_current_version()  # 获取当前版本
 
+    prefer_fastapi = getattr(config, "webui_backend", "fastapi") != "streamlit"
+
     # 返回生成的菜单项列表
     return (
         # 记录当下的时间标记
@@ -204,7 +266,18 @@ def menu_callback():
         ),
         # 分隔线
         pystray.Menu.SEPARATOR,
-        # 开始或停止 Web UI
+        # 新 WebUI（FastAPI + shadcn）
+        pystray.MenuItem(
+            lambda item: _t("tray_webui_next_exit") if fastapi_process else _t("tray_webui_next_start"),
+            start_stop_fastapi_webui,
+        ),
+        pystray.MenuItem(
+            lambda item: _t("tray_webui_next_address").format(address_port=fastapi_local_url),
+            open_fastapi_webui,
+            visible=lambda item: fastapi_process,
+            default=prefer_fastapi,
+        ),
+        # 旧 Streamlit Web UI（双轨保留）
         pystray.MenuItem(
             lambda item: _t("tray_webui_exit") if streamlit_process else _t("tray_webui_start"), start_stop_webui
         ),
@@ -213,7 +286,7 @@ def menu_callback():
             lambda item: _t("tray_webui_address").format(address_port=webui_local_url),
             open_webui,
             visible=lambda item: streamlit_process,
-            default=True,
+            default=not prefer_fastapi,
         ),
         # 局域网 URL 显示
         pystray.MenuItem(
@@ -254,6 +327,8 @@ def on_exit(icon: pystray.Icon, item: pystray.MenuItem):
     # 如果存在 Web UI 进程，则强制终止它
     if streamlit_process:
         streamlit_process.kill()
+    if fastapi_process:
+        fastapi_process.kill()
 
     # 如果存在录制进程，则发送 CTRL_BREAK_EVENT 信号停止录制
     if recording_process:

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project overview
 
-Windrecorder is a **Windows-only**, fully-local personal memory search engine (Rewind.ai / Copilot Recall alternative). It continuously captures the screen, indexes OCR text / window titles / optional image embeddings into local databases, and provides a Streamlit web UI for rewind, search, and activity stats. No cloud required for core features; optional OpenAI-compatible LLM endpoints power tag extraction, day poems, and the natural-language search extension.
+Windrecorder is a **Windows-only**, fully-local personal memory search engine (Rewind.ai / Copilot Recall alternative). It continuously captures the screen, indexes OCR text / window titles / optional image embeddings into local databases, and provides a web UI for rewind, search, and activity stats. **WebUI is dual-track**: legacy Streamlit (`webui.py`) and next-gen **FastAPI + React/shadcn** (`api_server.py` + `frontend/`). No cloud required for core features; optional OpenAI-compatible LLM endpoints power tag extraction, day poems, and the natural-language search extension.
 
 - License: GPL-2.0
 - Version: `windrecorder/__init__.py` (`__version__`)
@@ -35,8 +35,15 @@ System prerequisites (not installed by uv): **FFmpeg + ffprobe on PATH**, Git. P
 uv run --locked main.py
 # Or: start_app.bat (uv run main.py)
 
-# Web UI only (Streamlit)
+# Web UI only (legacy Streamlit)
 uv run --locked streamlit run webui.py
+
+# Web UI Next (FastAPI + frontend/dist; build frontend first)
+cd frontend && pnpm install && pnpm run build && cd ..
+uv run --locked python api_server.py
+# Dev: API on 17831 + Vite HMR (proxies /api /media)
+# uv run --locked python api_server.py --port 17831
+# cd frontend && pnpm run dev
 
 # Recording daemon only
 uv run --locked record_screen.py
@@ -71,13 +78,16 @@ There is **no automated unit-test suite** in this repo. Related checks that do e
 ```
 start_app.bat
     └── main.py                    # tray (pystray), single-instance via FileLock
-            ├── subprocess: streamlit run webui.py   # search/review UI
+            ├── subprocess: python api_server.py     # new WebUI (FastAPI + frontend/dist)
+            ├── subprocess: streamlit run webui.py   # legacy search/review UI (dual-track)
             └── subprocess: record_screen.py         # capture + idle maintain
 ```
 
-- `main.py` owns tray lifecycle, starts/stops Streamlit and recording processes, scrapes Streamlit stdout for Local/Network URL, uses `FileLock` on `config.tray_lock_path` to prevent double-start.
+- `main.py` owns tray lifecycle, starts/stops FastAPI/Streamlit and recording processes, scrapes stdout for `Local URL:` / `Network URL:`, uses `FileLock` on `config.tray_lock_path` to prevent double-start. `config.webui_backend` (`fastapi`|`streamlit`) sets which open-URL menu item is the tray default.
 - `record_screen.py` holds `config.record_lock_path`, runs capture + idle-maintenance threads, and restarts crashed worker threads.
 - `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()`.
+- `api_server.py` / `windrecorder/api/` is the FastAPI layer reusing `oneday`, `db_manager`, etc.; SPA static files from `frontend/dist`.
+- `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui (`--preset b27GcrRo`). Phase 1: Oneday page only.
 
 Do not assume a single process; state shared between tray/recorder/webui is files + SQLite + locks under `cache/locks/`.
 
@@ -97,9 +107,10 @@ Do not assume a single process; state shared between tray/recorder/webui is file
 | `utils.py` | i18n (`get_text` as `_t`), time/path/display helpers, ffmpeg checks. |
 | `lock.py` / `logger.py` / `file_utils.py` | Cross-process locks, logging, filesystem helpers. |
 | `ui/` | Streamlit tabs: `oneday`, `search`, `state`, `lab`, `recording`, `setting`, shared `components`. |
+| `api/` | FastAPI app (`app.py`), Oneday service/schemas; media + SPA hosting. |
 | `upgrade_migration_routine.py` | One-shot migrations on upgrade / onboard. |
 
-Root scripts outside the package: `main.py`, `webui.py`, `record_screen.py`, `onboard_setting.py`.
+Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `record_screen.py`, `onboard_setting.py`. Frontend app: `frontend/` (npm).
 
 ### Data flow
 
