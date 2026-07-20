@@ -10,6 +10,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -119,6 +127,21 @@ export default function SettingPage() {
     )
   }
 
+  const ocrEngineItems = (settings.support_ocr_lst || []).map((e) => ({ label: e, value: e }))
+  const ocrLangItems = (osLangs.length ? osLangs : [settings.ocr_lang]).map((e) => ({
+    label: e,
+    value: e,
+  }))
+  const langItems = [
+    { label: "English", value: "en" },
+    { label: "简体中文", value: "sc" },
+    { label: "日本語", value: "ja" },
+  ]
+  const webuiBackendItems = [
+    { label: "fastapi", value: "fastapi" },
+    { label: "streamlit", value: "streamlit" },
+  ]
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
       <PageHeader
@@ -204,31 +227,49 @@ export default function SettingPage() {
           <div className="grid gap-3 md:grid-cols-2">
             <label className="text-sm">
               {t("set_selectbox_local_ocr_engine")}
-              <select
-                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+              <Select
+                items={ocrEngineItems}
                 value={settings.ocr_engine}
-                onChange={(e) => setSettings({ ...settings, ocr_engine: e.target.value })}
+                onValueChange={(v) => {
+                  if (v != null) setSettings({ ...settings, ocr_engine: v })
+                }}
               >
-                {(settings.support_ocr_lst || []).map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {ocrEngineItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
             <label className="text-sm">
               {t("set_selectbox_ocr_lang")}
-              <select
-                className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+              <Select
+                items={ocrLangItems}
                 value={settings.ocr_lang}
-                onChange={(e) => setSettings({ ...settings, ocr_lang: e.target.value })}
+                onValueChange={(v) => {
+                  if (v != null) setSettings({ ...settings, ocr_lang: v })
+                }}
               >
-                {(osLangs.length ? osLangs : [settings.ocr_lang]).map((e) => (
-                  <option key={e} value={e}>
-                    {e}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="mt-1 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    {ocrLangItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
             </label>
             <label className="flex items-center gap-2 text-sm">
               <input
@@ -259,26 +300,49 @@ export default function SettingPage() {
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
             Language
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            <Select
+              items={langItems}
               value={settings.lang}
-              onChange={(e) => setSettings({ ...settings, lang: e.target.value })}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, lang: v })
+              }}
             >
-              <option value="en">English</option>
-              <option value="sc">简体中文</option>
-              <option value="ja">日本語</option>
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {langItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             webui backend
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            <Select
+              items={webuiBackendItems}
               value={settings.webui_backend}
-              onChange={(e) => setSettings({ ...settings, webui_backend: e.target.value })}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, webui_backend: v })
+              }}
             >
-              <option value="fastapi">fastapi</option>
-              <option value="streamlit">streamlit</option>
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {webuiBackendItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             max page result

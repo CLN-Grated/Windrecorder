@@ -10,6 +10,14 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -91,6 +99,20 @@ export default function RecordingPage() {
     )
   }
 
+  const recordModeItems = [
+    {
+      label: t("rs_text_record_mode_option_screenshot_array"),
+      value: "screenshot_array",
+    },
+    { label: t("rs_text_record_mode_option_ffmpeg"), value: "ffmpeg" },
+  ]
+  const ocrStrategyItems = [
+    { label: "manual", value: "0" },
+    { label: "auto", value: "1" },
+  ]
+  const recordEncoderItems = encoders.map((e) => ({ label: e, value: e }))
+  const compressEncoderItems = compressEncoders.map((e) => ({ label: e, value: e }))
+
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
       <PageHeader
@@ -139,14 +161,26 @@ export default function RecordingPage() {
           </label>
           <label className="text-sm">
             {t("rs_text_record_mode")}
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            <Select
+              items={recordModeItems}
               value={settings.record_mode}
-              onChange={(e) => setSettings({ ...settings, record_mode: e.target.value })}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, record_mode: v })
+              }}
             >
-              <option value="screenshot_array">{t("rs_text_record_mode_option_screenshot_array")}</option>
-              <option value="ffmpeg">{t("rs_text_record_mode_option_ffmpeg")}</option>
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {recordModeItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             {t("rs_input_screenshot_interval_second")}
@@ -197,14 +231,26 @@ export default function RecordingPage() {
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
             OCR index strategy
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
-              value={settings.OCR_index_strategy}
-              onChange={(e) => setSettings({ ...settings, OCR_index_strategy: Number(e.target.value) })}
+            <Select
+              items={ocrStrategyItems}
+              value={String(settings.OCR_index_strategy)}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, OCR_index_strategy: Number(v) })
+              }}
             >
-              <option value={0}>manual</option>
-              <option value={1}>auto</option>
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {ocrStrategyItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             store days
@@ -224,31 +270,49 @@ export default function RecordingPage() {
           </label>
           <label className="text-sm">
             record encoder
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            <Select
+              items={recordEncoderItems}
               value={settings.record_encoder}
-              onChange={(e) => setSettings({ ...settings, record_encoder: e.target.value })}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, record_encoder: v })
+              }}
             >
-              {encoders.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {recordEncoderItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             compress encoder
-            <select
-              className="mt-1 w-full rounded-md border bg-background px-2 py-1.5"
+            <Select
+              items={compressEncoderItems}
               value={settings.compress_encoder}
-              onChange={(e) => setSettings({ ...settings, compress_encoder: e.target.value })}
+              onValueChange={(v) => {
+                if (v != null) setSettings({ ...settings, compress_encoder: v })
+              }}
             >
-              {compressEncoders.map((e) => (
-                <option key={e} value={e}>
-                  {e}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger className="mt-1 w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {compressEncoderItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
           </label>
           <label className="text-sm">
             bitrate
