@@ -38,8 +38,8 @@ Windrecorder is a memory search app by records everything on your screen in smal
 
      - You can open the folder you want to install, enter `cmd` in the path bar and press Enter, and you will be located into current directory in terminal, then paste the above command and press Enter to execute;
 
-- Open `install_update.bat` in the directory. It installs [uv](https://github.com/astral-sh/uv) if needed, prepares Python 3.11 and the project `.venv`, then runs setup. If everything goes well, you can start using it!
-     - **Python 3.12 is not supported.** You do **not** need to pre-install Python or Poetry; uv manages them.
+- Open `install_update.bat` in the directory. It installs [uv](https://github.com/astral-sh/uv) if needed, prepares Python 3.12 and the project `.venv`, then runs setup. If everything goes well, you can start using it!
+     - Python 3.12 is the default; Python 3.10 and 3.11 remain supported. You do **not** need to pre-install Python or Poetry; uv manages them.
 
 
 # 🦝 How to use

@@ -12,7 +12,7 @@ Windrecorder is a **Windows-only**, fully-local personal memory search engine (R
 
 - License: GPL-2.0
 - Version: `windrecorder/__init__.py` (`__version__`)
-- Python: `>=3.10,<3.12` (3.12 is **not** supported)
+- Python: `>=3.10,<3.13` (defaults to 3.12; 3.10 and 3.11 remain supported)
 - Dependency manager: uv (in-project venv: `.venv`, lockfile: `uv.lock`)
 
 ## Common commands
@@ -26,7 +26,7 @@ Windrecorder is a **Windows-only**, fully-local personal memory search engine (R
 uv run --locked onboard_setting.py
 ```
 
-System prerequisites (not installed by uv): **FFmpeg + ffprobe on PATH**, Git. Python 3.11 is provisioned by uv when needed.
+System prerequisites (not installed by uv): **FFmpeg + ffprobe on PATH**, Git. Python 3.12 is provisioned by uv when needed; Python 3.10 and 3.11 remain supported.
 
 ### Run the app
 

@@ -16,10 +16,13 @@ if errorlevel 1 (
 call :ensure_uv
 if errorlevel 1 goto fail
 
+call :detect_installed_extras
+
 echo -preparing Python, virtual environment, and dependencies with uv
+if defined UV_EXTRAS echo -restoring previously installed optional modules
 color 0e
 title Windrecorder - Quick Setup
-uv run --locked "%PROJECT_ROOT%\onboard_setting.py"
+uv run --locked %UV_EXTRAS% "%PROJECT_ROOT%\onboard_setting.py"
 if errorlevel 1 (
     echo [ERROR] onboard setup failed.
     goto fail
@@ -35,6 +38,20 @@ echo.
 echo Installation stopped due to an error.
 pause
 exit /b 1
+
+:detect_installed_extras
+set "UV_EXTRAS="
+if not exist "%PROJECT_ROOT%\.venv\Scripts\python.exe" exit /b 0
+
+call :detect_extra "paddle-ocr" "rapidocr-onnxruntime"
+call :detect_extra "wechat-ocr" "wechat-ocr"
+call :detect_extra "img-embedding" "uform"
+exit /b 0
+
+:detect_extra
+"%PROJECT_ROOT%\.venv\Scripts\python.exe" -c "from importlib.metadata import version; version('%~2')" >nul 2>nul
+if not errorlevel 1 set "UV_EXTRAS=%UV_EXTRAS% --extra %~1"
+exit /b 0
 
 :ensure_uv
 where uv >nul 2>nul

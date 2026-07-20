@@ -42,8 +42,8 @@
 
     - 可以打开想要安装的文件夹，在路径栏输入`cmd` 并回车，即可在终端定位到当前目录，将以上命令贴入、回车执行；
 
-- 打开目录下的 `install_update.bat`。脚本会在需要时安装 [uv](https://github.com/astral-sh/uv)，准备 Python 3.11 与项目 `.venv`，然后进入配置向导；顺利的话就可以开始使用了！
-    - **暂不支持 Python 3.12**。无需预先安装 Python 或 Poetry，由 uv 负责管理。
+- 打开目录下的 `install_update.bat`。脚本会在需要时安装 [uv](https://github.com/astral-sh/uv)，准备 Python 3.12 与项目 `.venv`，然后进入配置向导；顺利的话就可以开始使用了！
+    - 默认使用 Python 3.12，仍兼容 Python 3.10 和 3.11。无需预先安装 Python 或 Poetry，由 uv 负责管理。
 
 
 # 🦝 如何使用
