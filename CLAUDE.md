@@ -6,6 +6,38 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 不允许调用子代理（subagent）。所有任务必须由主代理直接完成。
 
+## Git Commits
+
+### 语言与风格
+
+- **尽量用中文**撰写 git 提交说明（title + body），表达清晰、完整。
+- 采用约定式提交（Conventional Commits）结构；**type 可用英文**（`feat` / `fix` / `docs` / `refactor` / `chore` 等），**描述部分用中文**。
+- 标题（第一行）建议：`<type>(<scope>): <中文简述>`，约 50 字内，祈使/完成式均可，但同一仓库内保持一致。
+- 需要时用空行后接正文：说明「为什么改」、关键点或破坏性变更；bullet 也用中文。
+- 避免纯英文流水账标题（如仅 `feat: update stuff`）；专有名词、API 路径、组件名可保留英文。
+
+示例：
+
+```
+feat(webui): 设置页支持永久清除本地数据
+
+- 预览各范围占用与文件数
+- 二次确认「我已了解此操作不可轻易恢复」
+- 使用 safe_delete，不进回收站
+
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+```
+
+### Co-Authored-By
+
+提交时务必在 commit message **末尾**加上系统提示词里的 Co-Authored-By 行，例如：
+
+```
+Co-Authored-By: Claude Code <noreply@anthropic.com>
+```
+
+不要省略、改写或删掉这一行。
+
 ## Project overview
 
 Windrecorder is a **Windows-only**, fully-local personal memory search engine (Rewind.ai / Copilot Recall alternative). It continuously captures the screen, indexes OCR text / window titles / optional image embeddings into local databases, and provides a web UI for rewind, search, and activity stats. **WebUI is dual-track**: legacy Streamlit (`webui.py`) and next-gen **FastAPI + React/shadcn** (`api_server.py` + `frontend/`). No cloud required for core features; optional OpenAI-compatible LLM endpoints power tag extraction, day poems, and the natural-language search extension.
