@@ -73,18 +73,11 @@ def list_flags(date: Optional[str] = None) -> dict[str, Any]:
     if len(df) == 0:
         return {"items": [], "total": 0}
     items = []
-    for idx, row in df.iterrows():
-        item = _row_to_item(int(idx) if isinstance(idx, (int, float)) else 0, row)
-        # re-index by position for stable API ids
-        items.append(item)
-    # use positional index for API stability
-    items = []
     for pos in range(len(df)):
         row = df.iloc[pos]
         item = _row_to_item(pos, row)
-        if date:
-            if not str(item["datetime"]).startswith(date):
-                continue
+        if date and not str(item["datetime"]).startswith(date):
+            continue
         items.append(item)
     # newest first (match Streamlit display reverse)
     items = list(reversed(items))
