@@ -280,6 +280,17 @@ def get_options() -> dict[str, Any]:
             "support_multiple_languages": meta.get("support_multiple_languages", False),
             "support_lang_option": meta.get("support_lang_option", {}),
         }
+    try:
+        display_count = utils.get_display_count()
+        display_info_formatted = utils.get_display_info_formatted()
+    except Exception:
+        display_count, display_info_formatted = 1, []
+
+    crop = list(config.ocr_image_crop_URBL or [])
+    crop = utils.ensure_list_divisible_by_num(crop, 4)
+    while len(crop) < max(1, int(display_count)) * 4:
+        crop.extend([6, 6, 6, 3])
+
     return {
         "settings": {
             "lang": "sc",
@@ -294,7 +305,7 @@ def get_options() -> dict[str, Any]:
             "max_page_result": config.max_page_result,
             "day_begin_minutes": config.day_begin_minutes,
             "oneday_timeline_pic_num": config.oneday_timeline_pic_num,
-            "ocr_image_crop_URBL": config.ocr_image_crop_URBL,
+            "ocr_image_crop_URBL": crop,
             "wordcloud_user_stop_words": config.wordcloud_user_stop_words,
             "enable_month_lightbox_watermark": config.enable_month_lightbox_watermark,
             "enable_ocr_str_highlight_indicator": config.enable_ocr_str_highlight_indicator,
@@ -304,11 +315,14 @@ def get_options() -> dict[str, Any]:
             ),
             "webui_backend": getattr(config, "webui_backend", "fastapi"),
             "OCR_index_strategy": config.OCR_index_strategy,
+            "multi_display_record_strategy": getattr(config, "multi_display_record_strategy", "all"),
         },
         "os_support_lang": os_langs,
         "ocr_support": ocr_support,
         "db_status": get_db_status(),
         "lang_map": {"sc": "简体中文"},
+        "display_count": display_count,
+        "display_info_formatted": display_info_formatted,
     }
 
 

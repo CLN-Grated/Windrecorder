@@ -72,6 +72,8 @@ type SettingValues = {
   day_begin_minutes: number
   oneday_timeline_pic_num: number
   wordcloud_user_stop_words: string[]
+  ocr_image_crop_URBL: number[]
+  multi_display_record_strategy?: string
   webui_backend: string
   webui_password_enabled: boolean
   OCR_index_strategy?: number
@@ -89,6 +91,9 @@ export default function SettingPage() {
   const [osLangs, setOsLangs] = useState<string[]>([])
   const [ocrSupport, setOcrSupport] = useState<Record<string, OcrSupportMeta>>({})
   const [wordcloudText, setWordcloudText] = useState("")
+  const [displayCount, setDisplayCount] = useState(1)
+  const [displayLabels, setDisplayLabels] = useState<string[]>([])
+  const [cropDisplayIndex, setCropDisplayIndex] = useState(0)
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [about, setAbout] = useState<{ version: string; new_version: string | null; about_markdown: string } | null>(
     null,
@@ -134,14 +139,25 @@ export default function SettingPage() {
       wordcloud_user_stop_words: Array.isArray(raw.wordcloud_user_stop_words)
         ? raw.wordcloud_user_stop_words
         : [],
+      ocr_image_crop_URBL: Array.isArray(raw.ocr_image_crop_URBL)
+        ? raw.ocr_image_crop_URBL.map((n) => Number(n) || 0)
+        : [6, 6, 6, 3],
+      multi_display_record_strategy: raw.multi_display_record_strategy || "all",
       webui_backend: raw.webui_backend || "fastapi",
       webui_password_enabled: Boolean(raw.webui_password_enabled),
       OCR_index_strategy: raw.OCR_index_strategy,
+    }
+    const dc = Number(opts.display_count) || 1
+    while (s.ocr_image_crop_URBL.length < dc * 4) {
+      s.ocr_image_crop_URBL.push(6, 6, 6, 3)
     }
     setSettings(s)
     setWordcloudText((s.wordcloud_user_stop_words || []).join(", "))
     setOsLangs((opts.os_support_lang as string[]) || [])
     setOcrSupport((opts.ocr_support as Record<string, OcrSupportMeta>) || {})
+    setDisplayCount(dc)
+    setDisplayLabels((opts.display_info_formatted as string[]) || [])
+    setCropDisplayIndex(0)
     setDbStatus(opts.db_status as DbStatus)
     setAbout(ab)
   }
@@ -458,6 +474,115 @@ export default function SettingPage() {
               />
               {t("set_checkbox_recycle_deleted_files")}
             </label>
+          </div>
+
+          <Separator />
+          <div className="space-y-3">
+            <div>
+              <p className="text-sm font-medium">
+                <I18nMarkdown k="set_md_ocr_ignore_area" variant="sectionTitle" />
+              </p>
+              <p className="text-xs text-muted-foreground">{t("set_md_ocr_ignore_area_help")}</p>
+            </div>
+            {displayCount > 1 && settings.multi_display_record_strategy === "all" && displayLabels.length > 0 ? (
+              <label className="block text-sm">
+                {t("set_text_choose_displays")}
+                <Select
+                  items={displayLabels.map((label, i) => ({ label, value: String(i) }))}
+                  value={String(cropDisplayIndex)}
+                  onValueChange={(v) => {
+                    if (v != null) setCropDisplayIndex(Number(v))
+                  }}
+                >
+                  <SelectTrigger className="mt-1 w-full max-w-md">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {displayLabels.map((label, i) => (
+                        <SelectItem key={label} value={String(i)}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </label>
+            ) : null}
+            {(() => {
+              const base = Math.min(cropDisplayIndex, Math.max(0, displayCount - 1)) * 4
+              const crop = settings.ocr_image_crop_URBL
+              const setPad = (offset: number, value: number) => {
+                const next = [...crop]
+                while (next.length < base + 4) next.push(6, 6, 6, 3)
+                next[base + offset] = Math.min(40, Math.max(0, value))
+                setSettings({ ...settings, ocr_image_crop_URBL: next })
+              }
+              // 与 Streamlit / ocr_manager 一致：索引 0上 1右 2下 3左（百分数）
+              const top = Number(crop[base + 0] ?? 6)
+              const right = Number(crop[base + 1] ?? 6)
+              const bottom = Number(crop[base + 2] ?? 6)
+              const left = Number(crop[base + 3] ?? 3)
+              return (
+                <div className="grid gap-3 md:grid-cols-2">
+                  <label className="text-sm">
+                    {t("set_text_top_padding")}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={40}
+                      value={top}
+                      onChange={(e) => setPad(0, Number(e.target.value))}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    {t("set_text_right_padding")}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={40}
+                      value={right}
+                      onChange={(e) => setPad(1, Number(e.target.value))}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    {t("set_text_bottom_padding")}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={40}
+                      value={bottom}
+                      onChange={(e) => setPad(2, Number(e.target.value))}
+                    />
+                  </label>
+                  <label className="text-sm">
+                    {t("set_text_left_padding")}
+                    <Input
+                      type="number"
+                      min={0}
+                      max={40}
+                      value={left}
+                      onChange={(e) => setPad(3, Number(e.target.value))}
+                    />
+                  </label>
+                  <div className="relative col-span-full mx-auto aspect-video w-full max-w-lg overflow-hidden rounded-lg border bg-muted">
+                    <div
+                      className="absolute inset-0 bg-violet-500/25"
+                      style={{
+                        top: `${top}%`,
+                        right: `${right}%`,
+                        bottom: `${bottom}%`,
+                        left: `${left}%`,
+                      }}
+                      title="OCR 有效区域示意"
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center text-xs text-muted-foreground">
+                      OCR 有效区域（示意）
+                    </div>
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         </CardContent>
       </Card>
