@@ -231,5 +231,6 @@ export const ZH_MESSAGES: Record<string, string> = {
   "webui_footer_records": "数据库 {count} 行",
   "webui_footer_videos": "视频 {count} 个 · {size} GB",
   "webui_badge_video": "视频",
-  "webui_badge_text": "仅文本"
+  "webui_badge_text": "仅文本",
+  "lb_checkbox_add_watermark": "为光箱图片添加底部水印"
 }

@@ -60,18 +60,26 @@ type SettingValues = {
   lang: string
   ocr_engine: string
   ocr_lang: string
+  third_party_engine_ocr_lang: string[]
   support_ocr_lst: string[]
   index_reduce_same_content_at_different_time: boolean
   recycle_deleted_files: boolean
   enable_3_columns_in_oneday: boolean
   use_similar_ch_char_to_search: boolean
   enable_ocr_str_highlight_indicator: boolean
+  enable_month_lightbox_watermark: boolean
   max_page_result: number
   day_begin_minutes: number
   oneday_timeline_pic_num: number
+  wordcloud_user_stop_words: string[]
   webui_backend: string
   webui_password_enabled: boolean
   OCR_index_strategy?: number
+}
+
+type OcrSupportMeta = {
+  support_multiple_languages?: boolean
+  support_lang_option?: Record<string, string>
 }
 
 export default function SettingPage() {
@@ -79,6 +87,8 @@ export default function SettingPage() {
   const { refresh } = useI18n()
   const [settings, setSettings] = useState<SettingValues | null>(null)
   const [osLangs, setOsLangs] = useState<string[]>([])
+  const [ocrSupport, setOcrSupport] = useState<Record<string, OcrSupportMeta>>({})
+  const [wordcloudText, setWordcloudText] = useState("")
   const [dbStatus, setDbStatus] = useState<DbStatus | null>(null)
   const [about, setAbout] = useState<{ version: string; new_version: string | null; about_markdown: string } | null>(
     null,
@@ -101,8 +111,37 @@ export default function SettingPage() {
 
   const load = async () => {
     const [opts, ab] = await Promise.all([api.settingOptions(), api.settingAbout()])
-    setSettings(opts.settings as SettingValues)
+    const raw = opts.settings as Partial<SettingValues>
+    const s: SettingValues = {
+      lang: raw.lang || "sc",
+      ocr_engine: raw.ocr_engine || "",
+      ocr_lang: raw.ocr_lang || "",
+      third_party_engine_ocr_lang: Array.isArray(raw.third_party_engine_ocr_lang)
+        ? raw.third_party_engine_ocr_lang
+        : raw.third_party_engine_ocr_lang
+          ? [String(raw.third_party_engine_ocr_lang)]
+          : [],
+      support_ocr_lst: raw.support_ocr_lst || [],
+      index_reduce_same_content_at_different_time: Boolean(raw.index_reduce_same_content_at_different_time),
+      recycle_deleted_files: Boolean(raw.recycle_deleted_files),
+      enable_3_columns_in_oneday: Boolean(raw.enable_3_columns_in_oneday),
+      use_similar_ch_char_to_search: Boolean(raw.use_similar_ch_char_to_search),
+      enable_ocr_str_highlight_indicator: Boolean(raw.enable_ocr_str_highlight_indicator),
+      enable_month_lightbox_watermark: Boolean(raw.enable_month_lightbox_watermark),
+      max_page_result: Number(raw.max_page_result ?? 20),
+      day_begin_minutes: Number(raw.day_begin_minutes ?? 0),
+      oneday_timeline_pic_num: Number(raw.oneday_timeline_pic_num ?? 60),
+      wordcloud_user_stop_words: Array.isArray(raw.wordcloud_user_stop_words)
+        ? raw.wordcloud_user_stop_words
+        : [],
+      webui_backend: raw.webui_backend || "fastapi",
+      webui_password_enabled: Boolean(raw.webui_password_enabled),
+      OCR_index_strategy: raw.OCR_index_strategy,
+    }
+    setSettings(s)
+    setWordcloudText((s.wordcloud_user_stop_words || []).join(", "))
     setOsLangs((opts.os_support_lang as string[]) || [])
+    setOcrSupport((opts.ocr_support as Record<string, OcrSupportMeta>) || {})
     setDbStatus(opts.db_status as DbStatus)
     setAbout(ab)
   }
@@ -145,6 +184,10 @@ export default function SettingPage() {
       const payload: Record<string, unknown> = { ...settings }
       // 产品固定中文，不再提交 lang
       delete payload.lang
+      payload.wordcloud_user_stop_words = wordcloudText
+        .split(/[,，\n]/)
+        .map((s) => s.trim())
+        .filter((s) => s.length > 0)
       // Password: only send when setting a new one or explicitly removing (default is off / keep)
       if (removePassword) {
         payload.webui_access_password = ""
@@ -490,6 +533,71 @@ export default function SettingPage() {
             />
             {t("set_checkbox_enable_ocr_str_highlight_indicator")}
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={settings.enable_month_lightbox_watermark}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, enable_month_lightbox_watermark: checked === true })
+              }
+            />
+            {t("lb_checkbox_add_watermark")}
+          </label>
+          <label className="text-sm">
+            {t("set_input_oneday_timeline_thumbnail_num")}
+            <Input
+              type="number"
+              min={50}
+              max={100}
+              value={settings.oneday_timeline_pic_num}
+              onChange={(e) =>
+                setSettings({ ...settings, oneday_timeline_pic_num: Number(e.target.value) })
+              }
+            />
+          </label>
+          <label className="text-sm md:col-span-2">
+            {t("set_input_wordcloud_filter")}
+            <Input
+              className="mt-1"
+              value={wordcloudText}
+              onChange={(e) => setWordcloudText(e.target.value)}
+              placeholder={t("set_input_wordcloud_filter_help")}
+            />
+          </label>
+          {(() => {
+            const meta = ocrSupport[settings.ocr_engine]
+            const multi = Boolean(meta?.support_multiple_languages)
+            const opts = meta?.support_lang_option || {}
+            const codes = Object.keys(opts)
+            if (!multi || codes.length === 0) return null
+            return (
+              <div className="md:col-span-2 space-y-2 rounded-lg border p-3">
+                <p className="text-sm font-medium">{t("set_selectbox_ocr_lang")}（第三方引擎）</p>
+                <div className="grid gap-2 sm:grid-cols-2">
+                  {codes.map((code) => {
+                    const selected = settings.third_party_engine_ocr_lang.includes(code)
+                    return (
+                      <label key={code} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={selected}
+                          onCheckedChange={(checked) => {
+                            const on = checked === true
+                            const next = on
+                              ? [...settings.third_party_engine_ocr_lang, code]
+                              : settings.third_party_engine_ocr_lang.filter((c) => c !== code)
+                            setSettings({ ...settings, third_party_engine_ocr_lang: next })
+                          }}
+                        />
+                        <span>
+                          {opts[code] || code}{" "}
+                          <span className="text-xs text-muted-foreground">({code})</span>
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </div>
+            )
+          })()}
         </CardContent>
       </Card>
 
