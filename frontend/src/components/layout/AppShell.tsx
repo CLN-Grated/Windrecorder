@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react"
 import { NavLink, Outlet } from "react-router-dom"
 
+import { api, type FooterState } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { PublicAccessTip } from "@/components/layout/PublicAccessTip"
@@ -15,11 +17,71 @@ const NAV = [
   { to: "/setting", key: "tab_name_setting" },
 ] as const
 
+function FooterBar() {
+  const { t } = useI18n()
+  const [footer, setFooter] = useState<FooterState | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const load = () => {
+      api
+        .footer()
+        .then((data) => {
+          if (!cancelled) setFooter(data)
+        })
+        .catch(() => {
+          if (!cancelled) setFooter(null)
+        })
+    }
+    load()
+    const id = window.setInterval(load, 20_000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [])
+
+  if (!footer) {
+    return (
+      <footer className="border-t bg-muted/30 px-4 py-1.5 text-center text-xs text-muted-foreground md:px-6">
+        …
+      </footer>
+    )
+  }
+
+  const first = footer.first_record_time_str
+  const latest = footer.latest_record_time_str
+  const records = footer.latest_db_records_num
+  const vidSize = footer.videos_file_size
+  const vidCount = footer.videos_files_count
+
+  return (
+    <footer className="border-t bg-muted/30 px-4 py-1.5 text-xs text-muted-foreground md:px-6">
+      <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-center gap-x-3 gap-y-1 text-center sm:justify-between sm:text-left">
+        <span>
+          {t("webui_footer_time_range", {
+            first: String(first ?? "—"),
+            latest: String(latest ?? "—"),
+          })}
+        </span>
+        <span className="hidden sm:inline">
+          {t("webui_footer_records", { count: Number(records ?? 0) })}
+          {" · "}
+          {t("webui_footer_videos", {
+            count: Number(vidCount ?? 0),
+            size: String(vidSize ?? 0),
+          })}
+        </span>
+      </div>
+    </footer>
+  )
+}
+
 export function AppShell() {
   const { t, ready, error, config } = useI18n()
 
   return (
-    <div className="min-h-svh bg-background text-foreground">
+    <div className="flex min-h-svh flex-col bg-background text-foreground">
       <header className="sticky top-0 z-20 border-b bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-12 w-full max-w-7xl items-center justify-between gap-3 px-4 md:px-6">
           <div className="flex shrink-0 items-center gap-2">
@@ -67,9 +129,10 @@ export function AppShell() {
         </div>
       ) : null}
       <PublicAccessTip />
-      <main>
+      <main className="flex-1">
         <Outlet />
       </main>
+      <FooterBar />
     </div>
   )
 }

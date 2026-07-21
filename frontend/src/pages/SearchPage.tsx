@@ -9,7 +9,8 @@ import {
   type GlobalSearchResult,
   type SearchBounds,
 } from "@/lib/api"
-import { useT } from "@/lib/i18n"
+import { useI18n, useT } from "@/lib/i18n"
+import { highlightOcrText } from "@/lib/ocr-highlight"
 import { cn } from "@/lib/utils"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -44,6 +45,8 @@ function dateInputToIsoEnd(date: string): string {
 
 export default function SearchPage() {
   const t = useT()
+  const { config } = useI18n()
+  const highlightOn = Boolean(config?.enable_ocr_str_highlight_indicator)
   const [bounds, setBounds] = useState<SearchBounds | null>(null)
   const [mode, setMode] = useState<Mode>("ocr_month")
   const [keyword, setKeyword] = useState("")
@@ -251,10 +254,12 @@ export default function SearchPage() {
                             {formatDateTime(h.datetime) || formatClock(h.datetime)}
                           </div>
                           <div className="line-clamp-1 font-medium">{h.win_title || h.videofile_name}</div>
-                          <div className="line-clamp-2 text-xs text-muted-foreground">{h.ocr_text}</div>
+                          <div className="line-clamp-2 text-xs text-muted-foreground">
+                            {highlightOcrText(h.ocr_text, keyword, highlightOn)}
+                          </div>
                         </div>
                         <Badge variant={h.video_on_disk ? "secondary" : "outline"}>
-                          {h.video_on_disk ? "video" : "text"}
+                          {h.video_on_disk ? t("webui_badge_video") : t("webui_badge_text")}
                         </Badge>
                       </div>
                     </button>
@@ -315,7 +320,9 @@ export default function SearchPage() {
                     as="span"
                   />
                 </AlertTitle>
-                <AlertDescription className="line-clamp-8 text-xs">{hit.ocr_text}</AlertDescription>
+                <AlertDescription className="line-clamp-8 text-xs">
+                  {highlightOcrText(hit.ocr_text, keyword, highlightOn)}
+                </AlertDescription>
               </Alert>
             ) : (
               <div className="flex aspect-video items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">

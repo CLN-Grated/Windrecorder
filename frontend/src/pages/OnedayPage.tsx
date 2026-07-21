@@ -13,7 +13,8 @@ import {
   type Timeline,
   type WintitleStat,
 } from "@/lib/api"
-import { useT } from "@/lib/i18n"
+import { useI18n, useT } from "@/lib/i18n"
+import { highlightOcrText } from "@/lib/ocr-highlight"
 import { cn } from "@/lib/utils"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -46,6 +47,8 @@ function ActivitySpark({ points }: { points: DayChart["points"] }) {
 
 export function OnedayPage() {
   const t = useT()
+  const { config } = useI18n()
+  const highlightOn = Boolean(config?.enable_ocr_str_highlight_indicator)
   const [date, setDate] = useState<string>("")
   const [meta, setMeta] = useState<DayMeta | null>(null)
   const [chart, setChart] = useState<DayChart | null>(null)
@@ -414,7 +417,9 @@ export function OnedayPage() {
                 <AlertTitle>{t("oneday_text_not_found_vid_but_has_data")}</AlertTitle>
                 <AlertDescription className="space-y-2">
                   <p>{String(locate.row?.win_title ?? "")}</p>
-                  <p className="line-clamp-6 text-xs text-muted-foreground">{String(locate.row?.ocr_text ?? "")}</p>
+                  <p className="line-clamp-6 text-xs text-muted-foreground">
+                    {highlightOcrText(String(locate.row?.ocr_text ?? ""), keyword, highlightOn && searchOn)}
+                  </p>
                 </AlertDescription>
               </Alert>
             )}
@@ -461,7 +466,11 @@ export function OnedayPage() {
                           onClick={() => setHitIndex(hit.index)}
                         >
                           <span className="font-mono text-muted-foreground">{formatClock(hit.datetime)}</span>{" "}
-                          <span className="line-clamp-1">{hit.win_title || hit.ocr_text || hit.videofile_name}</span>
+                          <span className="line-clamp-1">
+                            {hit.win_title ||
+                              highlightOcrText(hit.ocr_text, keyword, highlightOn) ||
+                              hit.videofile_name}
+                          </span>
                         </button>
                       </li>
                     ))}

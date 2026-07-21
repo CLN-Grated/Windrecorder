@@ -65,6 +65,7 @@ type SettingValues = {
   recycle_deleted_files: boolean
   enable_3_columns_in_oneday: boolean
   use_similar_ch_char_to_search: boolean
+  enable_ocr_str_highlight_indicator: boolean
   max_page_result: number
   day_begin_minutes: number
   oneday_timeline_pic_num: number
@@ -479,6 +480,15 @@ export default function SettingPage() {
               }
             />
             {t("set_checkbox_use_similar_zh_char_to_search")}
+          </label>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <Checkbox
+              checked={settings.enable_ocr_str_highlight_indicator}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, enable_ocr_str_highlight_indicator: checked === true })
+              }
+            />
+            {t("set_checkbox_enable_ocr_str_highlight_indicator")}
           </label>
         </CardContent>
       </Card>

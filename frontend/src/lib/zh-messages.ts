@@ -225,5 +225,11 @@ export const ZH_MESSAGES: Record<string, string> = {
   "webui_clear_success": "已清除 {deleted} 项",
   "webui_clear_failed": "部分失败：成功 {deleted}，失败 {failed}",
   "webui_clear_empty": "请至少选择一个范围",
-  "webui_clear_loading": "正在统计占用…"
+  "webui_clear_loading": "正在统计占用…",
+  "set_checkbox_enable_ocr_str_highlight_indicator": "在搜索结果中高亮显示 OCR 匹配关键词",
+  "webui_footer_time_range": "最早 {first} · 最新 {latest}",
+  "webui_footer_records": "数据库 {count} 行",
+  "webui_footer_videos": "视频 {count} 个 · {size} GB",
+  "webui_badge_video": "视频",
+  "webui_badge_text": "仅文本"
 }

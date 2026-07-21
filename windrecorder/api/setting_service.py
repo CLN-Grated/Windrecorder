@@ -297,6 +297,7 @@ def get_options() -> dict[str, Any]:
             "ocr_image_crop_URBL": config.ocr_image_crop_URBL,
             "wordcloud_user_stop_words": config.wordcloud_user_stop_words,
             "enable_month_lightbox_watermark": config.enable_month_lightbox_watermark,
+            "enable_ocr_str_highlight_indicator": config.enable_ocr_str_highlight_indicator,
             "webui_password_enabled": bool(
                 (getattr(config, "webui_access_password_hash", None) or "")
                 or (getattr(config, "webui_access_password_md5", None) or "")
@@ -326,6 +327,7 @@ def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
         "ocr_image_crop_URBL",
         "wordcloud_user_stop_words",
         "enable_month_lightbox_watermark",
+        "enable_ocr_str_highlight_indicator",
         "webui_backend",
         "OCR_index_strategy",
     ]
