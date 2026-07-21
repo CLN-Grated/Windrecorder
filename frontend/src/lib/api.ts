@@ -75,6 +75,13 @@ export type PublicConfig = {
 
 export type FooterState = Record<string, string | number | boolean | null | undefined>
 
+export type FlagItem = {
+  index: number
+  datetime: string
+  note: string
+  thumbnail?: string
+}
+
 export type SearchBounds = {
   earliest_ts: number
   latest_ts: number
@@ -150,12 +157,14 @@ async function postForm<T>(url: string, form: FormData): Promise<T> {
   return res.json() as Promise<T>
 }
 
-async function postJson<T>(url: string, body: unknown): Promise<T> {
+async function postJson<T>(url: string, body: unknown, method: "POST" | "PATCH" | "DELETE" = "POST"): Promise<T> {
   const res = await fetch(url, {
-    method: "POST",
+    method,
     credentials: "include",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    body: method === "DELETE" && (body == null || (typeof body === "object" && Object.keys(body as object).length === 0))
+      ? undefined
+      : JSON.stringify(body ?? {}),
   })
   if (!res.ok) {
     const text = await res.text().catch(() => "")
@@ -176,6 +185,19 @@ export const api = {
   authLogout: () => postForm<{ ok: boolean }>("/api/auth/logout", new FormData()),
   publicConfig: () => getJson<PublicConfig>("/api/config/public"),
   footer: () => getJson<FooterState>("/api/footer"),
+  flagsList: (date?: string) =>
+    getJson<{ items: FlagItem[]; total: number }>(
+      date ? `/api/flags?date=${encodeURIComponent(date)}` : "/api/flags",
+    ),
+  flagsAdd: (datetime: string, note?: string) =>
+    postJson<{ ok: boolean; item?: FlagItem }>("/api/flags", {
+      datetime,
+      note,
+    }),
+  flagsUpdate: (datetime: string, note: string) =>
+    postJson<{ ok: boolean }>("/api/flags", { datetime, note }, "PATCH"),
+  flagsDelete: (datetime: string) =>
+    postJson<{ ok: boolean }>(`/api/flags?datetime=${encodeURIComponent(datetime)}`, {}, "DELETE"),
   defaultDate: () => getJson<{ date: string }>("/api/oneday/default-date"),
   dayMeta: (date: string) => getJson<DayMeta>(`/api/oneday/meta?date=${encodeURIComponent(date)}`),
   dayChart: (date: string) => getJson<DayChart>(`/api/oneday/chart?date=${encodeURIComponent(date)}`),
