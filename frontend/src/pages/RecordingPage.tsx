@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Video } from "lucide-react"
 
-import { api } from "@/lib/api"
+import { api, type BenchmarkJob } from "@/lib/api"
 import { useT } from "@/lib/i18n"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 type Settings = {
   start_recording_on_startup: boolean
@@ -62,6 +63,9 @@ export default function RecordingPage() {
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [benchRunning, setBenchRunning] = useState(false)
+  const [benchKind, setBenchKind] = useState<"record" | "compress" | null>(null)
+  const [benchResult, setBenchResult] = useState<BenchmarkJob | null>(null)
 
   useEffect(() => {
     api
@@ -114,6 +118,44 @@ export default function RecordingPage() {
     const list = compressAccelerators[settings.compress_encoder] || []
     return list.map((a) => ({ label: a, value: a }))
   }, [compressAccelerators, settings])
+
+  useEffect(() => {
+    if (!benchRunning) return
+    const id = window.setInterval(() => {
+      api
+        .recordingBenchmarkStatus()
+        .then((job) => {
+          setBenchResult(job)
+          if (!job.running) {
+            setBenchRunning(false)
+            window.clearInterval(id)
+            if (job.error) {
+              setError(job.error)
+            }
+          }
+        })
+        .catch(() => {})
+    }, 1500)
+    return () => window.clearInterval(id)
+  }, [benchRunning])
+
+  const runBenchmark = async (kind: "record" | "compress") => {
+    setError(null)
+    setMessage(null)
+    setBenchResult(null)
+    setBenchKind(kind)
+    setBenchRunning(true)
+    try {
+      const res = await api.recordingBenchmark(kind)
+      if (!res.ok) {
+        setBenchRunning(false)
+        setError(res.error || t("webui_set_update_failed"))
+      }
+    } catch (e) {
+      setBenchRunning(false)
+      setError(e instanceof Error ? e.message : String(e))
+    }
+  }
 
   if (loading || !settings) {
     return (
@@ -544,6 +586,63 @@ export default function RecordingPage() {
                 onChange={(e) => patch({ compress_cpu_threads: Number(e.target.value) })}
               />
             </label>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("rs_text_show_encode_option")}</CardTitle>
+          <CardDescription>{t("rs_text_encode_benchmark_loading")}</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={benchRunning}
+              onClick={() => void runBenchmark("record")}
+            >
+              {benchRunning && benchKind === "record"
+                ? t("rs_text_encode_benchmark_loading")
+                : t("rs_btn_encode_benchmark")}
+              （录制）
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              disabled={benchRunning}
+              onClick={() => void runBenchmark("compress")}
+            >
+              {benchRunning && benchKind === "compress"
+                ? t("rs_text_encode_benchmark_loading")
+                : t("rs_btn_encode_benchmark")}
+              （压缩）
+            </Button>
+          </div>
+          {benchResult?.result && benchResult.result.length > 0 ? (
+            <div className="overflow-x-auto rounded-lg border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {Object.keys(benchResult.result[0]).map((k) => (
+                      <TableHead key={k}>{k}</TableHead>
+                    ))}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {benchResult.result.map((row, i) => (
+                    <TableRow key={i}>
+                      {Object.keys(benchResult.result![0]).map((k) => (
+                        <TableCell key={k}>{String(row[k] ?? "")}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          ) : benchResult ? (
+            <p className="text-sm text-muted-foreground">{t("rs_text_encode_benchmark_loading")}</p>
           ) : null}
         </CardContent>
       </Card>

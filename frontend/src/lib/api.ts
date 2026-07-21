@@ -82,6 +82,17 @@ export type FlagItem = {
   thumbnail?: string
 }
 
+export type BenchmarkJob = {
+  running: boolean
+  kind: "record" | "compress" | null
+  started_at: number | null
+  finished_at: number | null
+  ok: boolean | null
+  error: string | null
+  time_cost_seconds: number | null
+  result: Record<string, unknown>[] | null
+}
+
 export type SearchBounds = {
   earliest_ts: number
   latest_ts: number
@@ -260,6 +271,13 @@ export const api = {
   recordingOptions: () => getJson<Record<string, unknown>>("/api/recording/options"),
   recordingSave: (payload: Record<string, unknown>) =>
     postJson<{ ok: boolean; applied: string[] }>("/api/recording/save", payload),
+  recordingBenchmark: (kind: "record" | "compress") =>
+    postJson<{ ok: boolean; started?: boolean; error?: string; job?: BenchmarkJob }>(
+      "/api/recording/benchmark",
+      { kind },
+    ),
+  recordingBenchmarkStatus: () =>
+    getJson<BenchmarkJob>("/api/recording/benchmark/status"),
   settingOptions: () => getJson<Record<string, unknown>>("/api/setting/options"),
   settingSave: (payload: Record<string, unknown>) =>
     postJson<{ ok: boolean; applied: string[] }>("/api/setting/save", payload),

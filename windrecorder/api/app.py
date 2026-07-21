@@ -262,6 +262,15 @@ def create_app() -> FastAPI:
     def recording_save(payload: dict):
         return recording_service.save_settings(payload)
 
+    @app.post("/api/recording/benchmark")
+    def recording_benchmark(payload: dict):
+        kind = str(payload.get("kind") or "compress")
+        return recording_service.start_benchmark(kind)
+
+    @app.get("/api/recording/benchmark/status")
+    def recording_benchmark_status():
+        return recording_service.get_benchmark_status()
+
     @app.get("/api/setting/options")
     def setting_options():
         return setting_service.get_options()
