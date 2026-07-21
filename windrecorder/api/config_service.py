@@ -11,7 +11,7 @@ def get_public_config() -> dict[str, Any]:
     """Frontend-safe config subset (no AI secrets; password only as enabled flag)."""
     return {
         "version": __version__,
-        "lang": config.lang,
+        "lang": "sc",  # 产品已固定简体中文，不再支持多语言
         "webui_backend": getattr(config, "webui_backend", "fastapi"),
         "record_mode": config.record_mode,
         "day_begin_minutes": config.day_begin_minutes,

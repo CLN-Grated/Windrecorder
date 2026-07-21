@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import datetime
 import os
 from typing import Any, Optional
@@ -63,8 +64,39 @@ def _media_video_url(filename: str) -> str:
     return f"/media/video/{quote(filename)}"
 
 
+def _encode_media_path_token(abs_path: str) -> str:
+    """URL-safe base64 of absolute path (no padding) for path-based media URLs."""
+    raw = os.path.abspath(abs_path).encode("utf-8")
+    return base64.urlsafe_b64encode(raw).decode("ascii").rstrip("=")
+
+
+def _decode_media_path_token(token: str) -> Optional[str]:
+    if not token:
+        return None
+    try:
+        pad = "=" * (-len(token) % 4)
+        return base64.urlsafe_b64decode(token + pad).decode("utf-8")
+    except Exception:
+        return None
+
+
+def media_file_url(path: str) -> str:
+    """
+    Build a media URL whose last path segment is the real filename.
+
+    Shape: /media/file/{token}/{basename}
+    - no query string (mobile download / tab title use path segment, not ?path=)
+    - token carries the absolute path; basename is for display/download name only
+    """
+    abs_path = os.path.abspath(path)
+    name = os.path.basename(abs_path) or "file"
+    token = _encode_media_path_token(abs_path)
+    return f"/media/file/{token}/{quote(name)}"
+
+
+# keep private alias used inside this module
 def _media_file_url(path: str) -> str:
-    return f"/media/file?path={quote(path, safe='')}"
+    return media_file_url(path)
 
 
 def _timeline_img_name(day: datetime.date) -> str:
@@ -401,6 +433,18 @@ def resolve_allowed_file_path(path: str) -> Optional[str]:
         except ValueError:
             continue
     return None
+
+
+def resolve_media_file_token(token: str, filename: str) -> Optional[str]:
+    """Decode path token and ensure basename matches + path is under allowed roots."""
+    decoded = _decode_media_path_token(token)
+    if not decoded:
+        return None
+    abs_path = os.path.abspath(decoded)
+    # last path segment must match (prevents renaming attacks via URL)
+    if os.path.basename(abs_path) != os.path.basename(filename):
+        return None
+    return resolve_allowed_file_path(abs_path)
 
 
 def _deep_linking_by_datetime(dt: datetime.datetime) -> Optional[str]:

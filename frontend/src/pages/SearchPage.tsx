@@ -119,7 +119,7 @@ export default function SearchPage() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("webui_error")}</AlertTitle>
           <AlertDescription className="break-all">{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -300,6 +300,9 @@ export default function SearchPage() {
                 className="aspect-video w-full rounded-lg bg-black object-contain"
                 src={`${hit.video_url}#t=${Math.max(0, hit.start_seconds ?? 0)}`}
                 controls
+                controlsList="nodownload"
+                preload="metadata"
+                playsInline
                 autoPlay
               />
             ) : hit ? (

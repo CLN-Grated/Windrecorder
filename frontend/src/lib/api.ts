@@ -59,12 +59,6 @@ export type WintitleStat = {
   screentime_sum?: string
 }
 
-export type I18nPayload = {
-  lang: string
-  messages: Record<string, string>
-  available: string[]
-}
-
 export type PublicConfig = {
   version: string
   lang: string
@@ -180,8 +174,6 @@ export const api = {
     return postForm<{ ok: boolean; authenticated: boolean; token?: string }>("/api/auth/login", form)
   },
   authLogout: () => postForm<{ ok: boolean }>("/api/auth/logout", new FormData()),
-  i18n: (lang?: string) =>
-    getJson<I18nPayload>(lang ? `/api/i18n?lang=${encodeURIComponent(lang)}` : "/api/i18n"),
   publicConfig: () => getJson<PublicConfig>("/api/config/public"),
   footer: () => getJson<FooterState>("/api/footer"),
   defaultDate: () => getJson<{ date: string }>("/api/oneday/default-date"),
@@ -272,6 +264,36 @@ export const api = {
     }>("/api/setting/update-db/status"),
   settingAbout: () =>
     getJson<{ version: string; new_version: string | null; about_markdown: string }>("/api/setting/about"),
+  settingClearDataPreview: () =>
+    getJson<{
+      permanent: boolean
+      is_recording: boolean
+      scopes: Record<
+        string,
+        {
+          id: string
+          label_key: string
+          path_hint: string
+          file_count: number
+          byte_size: number
+          human_size: string
+          exists: boolean
+          target_count: number
+        }
+      >
+      total_if_all: { file_count: number; byte_size: number; human_size: string }
+    }>("/api/setting/clear-data/preview"),
+  settingClearData: (scopes: string[]) =>
+    postJson<{
+      ok: boolean
+      error?: string
+      detail?: string
+      deleted?: { path: string; scope: string; ok: boolean }[]
+      failed?: { path: string; scope: string; error: string }[]
+      deleted_count?: number
+      failed_count?: number
+      permanent?: boolean
+    }>("/api/setting/clear-data", { scopes, confirm: true }),
 }
 
 export function shiftDate(isoDate: string, days: number): string {

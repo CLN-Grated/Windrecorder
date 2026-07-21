@@ -16,7 +16,7 @@ const NAV = [
 ] as const
 
 export function AppShell() {
-  const { t, ready, error, config, lang } = useI18n()
+  const { t, ready, error, config } = useI18n()
 
   return (
     <div className="min-h-svh bg-background text-foreground">
@@ -59,12 +59,11 @@ export function AppShell() {
               ))
             )}
           </nav>
-          <div className="hidden shrink-0 text-xs text-muted-foreground md:block">{lang}</div>
         </div>
       </header>
       {error ? (
         <div className="border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-center text-sm text-destructive">
-          i18n/config: {error}
+          配置加载失败: {error}
         </div>
       ) : null}
       <PublicAccessTip />

@@ -9,6 +9,7 @@ import {
 } from "react"
 
 import { api, type PublicConfig } from "@/lib/api"
+import { ZH_MESSAGES } from "@/lib/zh-messages"
 
 type Messages = Record<string, string>
 
@@ -56,18 +57,12 @@ export function stripMarkdownForUi(text: string): string {
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLang] = useState("en")
-  const [messages, setMessages] = useState<Messages>({})
   const [config, setConfig] = useState<PublicConfig | null>(null)
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
     try {
-      // i18n is public (login page); publicConfig requires auth when password is set
-      const i18n = await api.i18n()
-      setLang(i18n.lang)
-      setMessages(i18n.messages || {})
       try {
         const pub = await api.publicConfig()
         setConfig(pub)
@@ -86,13 +81,10 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     void refresh()
   }, [refresh])
 
-  const tRaw = useCallback(
-    (key: string, vars?: Record<string, string | number>) => {
-      const raw = messages[key] ?? `(${key})`
-      return formatMessage(raw, vars)
-    },
-    [messages],
-  )
+  const tRaw = useCallback((key: string, vars?: Record<string, string | number>) => {
+    const raw = ZH_MESSAGES[key] ?? `(${key})`
+    return formatMessage(raw, vars)
+  }, [])
 
   const t = useCallback(
     (key: string, vars?: Record<string, string | number>) => stripMarkdownForUi(tRaw(key, vars)),
@@ -100,8 +92,17 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   )
 
   const value = useMemo(
-    () => ({ lang, messages, ready, error, config, t, tRaw, refresh }),
-    [lang, messages, ready, error, config, t, tRaw, refresh],
+    () => ({
+      lang: "sc",
+      messages: ZH_MESSAGES,
+      ready,
+      error,
+      config,
+      t,
+      tRaw,
+      refresh,
+    }),
+    [ready, error, config, t, tRaw, refresh],
   )
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>

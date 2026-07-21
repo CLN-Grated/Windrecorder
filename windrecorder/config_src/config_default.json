@@ -15,7 +15,7 @@
   "thumbnail_generation_jpg_quality": 30,
   "vdb_img_path": "db_imgemb",
   "search_max_num": "50",
-  "lang": "en",
+  "lang": "sc",
   "ocr_lang": "zh-Hans-CN",
   "third_party_engine_ocr_lang": [
     "eng"

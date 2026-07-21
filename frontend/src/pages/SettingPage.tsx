@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { Settings } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Settings, Trash2 } from "lucide-react"
 
 import { api, type DbStatus } from "@/lib/api"
 import { useI18n, useT } from "@/lib/i18n"
@@ -9,6 +9,15 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -20,6 +29,32 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+
+type ClearScopeInfo = {
+  id: string
+  label_key: string
+  path_hint: string
+  file_count: number
+  byte_size: number
+  human_size: string
+  exists: boolean
+  target_count: number
+}
+
+type ClearPreview = {
+  permanent: boolean
+  is_recording: boolean
+  scopes: Record<string, ClearScopeInfo>
+  total_if_all: { file_count: number; byte_size: number; human_size: string }
+}
+
+const CLEAR_SCOPE_ORDER = [
+  "ocr_db",
+  "img_emb",
+  "videos",
+  "screenshot_cache",
+  "result_assets",
+] as const
 
 type SettingValues = {
   lang: string
@@ -55,6 +90,13 @@ export default function SettingPage() {
   const [shutdownAfter, setShutdownAfter] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [clearOpen, setClearOpen] = useState(false)
+  const [clearStep, setClearStep] = useState<"select" | "ack">("select")
+  const [clearPreview, setClearPreview] = useState<ClearPreview | null>(null)
+  const [clearLoading, setClearLoading] = useState(false)
+  const [clearExecuting, setClearExecuting] = useState(false)
+  const [selectedScopes, setSelectedScopes] = useState<Record<string, boolean>>({})
+  const [clearAck, setClearAck] = useState(false)
 
   const load = async () => {
     const [opts, ab] = await Promise.all([api.settingOptions(), api.settingAbout()])
@@ -100,6 +142,8 @@ export default function SettingPage() {
     setError(null)
     try {
       const payload: Record<string, unknown> = { ...settings }
+      // 产品固定中文，不再提交 lang
+      delete payload.lang
       // Password: only send when setting a new one or explicitly removing (default is off / keep)
       if (removePassword) {
         payload.webui_access_password = ""
@@ -119,6 +163,86 @@ export default function SettingPage() {
     }
   }
 
+  const openClearDialog = async () => {
+    setClearOpen(true)
+    setClearStep("select")
+    setClearAck(false)
+    setClearLoading(true)
+    setClearPreview(null)
+    setError(null)
+    try {
+      const preview = await api.settingClearDataPreview()
+      setClearPreview(preview)
+      const next: Record<string, boolean> = {}
+      for (const id of CLEAR_SCOPE_ORDER) {
+        next[id] = false
+      }
+      setSelectedScopes(next)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+      setClearOpen(false)
+    } finally {
+      setClearLoading(false)
+    }
+  }
+
+  const selectedScopeIds = useMemo(
+    () => CLEAR_SCOPE_ORDER.filter((id) => selectedScopes[id]),
+    [selectedScopes],
+  )
+
+  const selectedSummary = useMemo(() => {
+    if (!clearPreview) return { file_count: 0, byte_size: 0, human_size: "0 B" }
+    let file_count = 0
+    let byte_size = 0
+    for (const id of selectedScopeIds) {
+      const s = clearPreview.scopes[id]
+      if (!s) continue
+      file_count += s.file_count
+      byte_size += s.byte_size
+    }
+    // reuse backend-style human size roughly
+    const units = ["B", "KB", "MB", "GB", "TB"]
+    let size = byte_size
+    let u = 0
+    while (size >= 1024 && u < units.length - 1) {
+      size /= 1024
+      u++
+    }
+    const human_size = u === 0 ? `${byte_size} B` : `${size.toFixed(1)} ${units[u]}`
+    return { file_count, byte_size, human_size }
+  }, [clearPreview, selectedScopeIds])
+
+  const executeClear = async () => {
+    if (!clearAck || selectedScopeIds.length === 0) return
+    setClearExecuting(true)
+    setError(null)
+    setMessage(null)
+    try {
+      const res = await api.settingClearData([...selectedScopeIds])
+      if (res.error === "recording" || (!res.ok && res.detail?.includes("录制"))) {
+        setError(res.detail || t("webui_clear_recording"))
+        setClearStep("select")
+        return
+      }
+      const deleted = res.deleted_count ?? res.deleted?.length ?? 0
+      const failed = res.failed_count ?? res.failed?.length ?? 0
+      if (failed > 0) {
+        setMessage(t("webui_clear_failed", { deleted, failed }))
+      } else {
+        setMessage(t("webui_clear_success", { deleted }))
+      }
+      setClearOpen(false)
+      setClearStep("select")
+      setClearAck(false)
+      await load()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setClearExecuting(false)
+    }
+  }
+
   if (loading || !settings) {
     return (
       <div className="mx-auto max-w-7xl p-6">
@@ -132,11 +256,6 @@ export default function SettingPage() {
     label: e,
     value: e,
   }))
-  const langItems = [
-    { label: "English", value: "en" },
-    { label: "简体中文", value: "sc" },
-    { label: "日本語", value: "ja" },
-  ]
   const webuiBackendItems = [
     { label: "fastapi", value: "fastapi" },
     { label: "streamlit", value: "streamlit" },
@@ -152,7 +271,7 @@ export default function SettingPage() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("webui_error")}</AlertTitle>
           <AlertDescription className="break-all">{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -169,7 +288,11 @@ export default function SettingPage() {
           </CardTitle>
           <CardDescription>
             {dbStatus
-              ? `videos ${dbStatus.video_count}, unindexed ${dbStatus.unindexed_count}, ETA ${dbStatus.estimate_indexing_time}`
+              ? t("webui_set_db_status_summary", {
+                  count: dbStatus.video_count,
+                  unindexed: dbStatus.unindexed_count,
+                  eta: dbStatus.estimate_indexing_time,
+                })
               : "—"}
           </CardDescription>
         </CardHeader>
@@ -198,7 +321,7 @@ export default function SettingPage() {
                   try {
                     const res = await api.settingUpdateDb(shutdownAfter)
                     if (!res.ok) {
-                      setError(res.error || "update failed")
+                      setError(res.error || t("webui_set_update_failed"))
                       return
                     }
                     setUpdatingDb(true)
@@ -213,11 +336,10 @@ export default function SettingPage() {
                   : t("set_btn_update_db_manual")}
               </Button>
               <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={shutdownAfter}
                   disabled={updatingDb}
-                  onChange={(e) => setShutdownAfter(e.target.checked)}
+                  onCheckedChange={(checked) => setShutdownAfter(checked === true)}
                 />
                 {t("set_checkbox_shutdown_after_updated")}
               </label>
@@ -272,20 +394,23 @@ export default function SettingPage() {
               </Select>
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={settings.index_reduce_same_content_at_different_time}
-                onChange={(e) =>
-                  setSettings({ ...settings, index_reduce_same_content_at_different_time: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setSettings({
+                    ...settings,
+                    index_reduce_same_content_at_different_time: checked === true,
+                  })
                 }
               />
               {t("set_checkbox_reduce_same_content_at_different_time")}
             </label>
             <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
+              <Checkbox
                 checked={settings.recycle_deleted_files}
-                onChange={(e) => setSettings({ ...settings, recycle_deleted_files: e.target.checked })}
+                onCheckedChange={(checked) =>
+                  setSettings({ ...settings, recycle_deleted_files: checked === true })
+                }
               />
               {t("set_checkbox_recycle_deleted_files")}
             </label>
@@ -295,34 +420,11 @@ export default function SettingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">UI / Search</CardTitle>
+          <CardTitle className="text-base">{t("webui_set_ui_search_title")}</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
-            Language
-            <Select
-              items={langItems}
-              value={settings.lang}
-              onValueChange={(v) => {
-                if (v != null) setSettings({ ...settings, lang: v })
-              }}
-            >
-              <SelectTrigger className="mt-1 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {langItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="text-sm">
-            webui backend
+            {t("webui_set_backend")}
             <Select
               items={webuiBackendItems}
               value={settings.webui_backend}
@@ -345,7 +447,7 @@ export default function SettingPage() {
             </Select>
           </label>
           <label className="text-sm">
-            max page result
+            {t("set_input_max_num_search_page")}
             <Input
               type="number"
               value={settings.max_page_result}
@@ -353,7 +455,7 @@ export default function SettingPage() {
             />
           </label>
           <label className="text-sm">
-            day begin minutes
+            {t("set_input_day_begin_minutes")}
             <Input
               type="number"
               value={settings.day_begin_minutes}
@@ -361,20 +463,22 @@ export default function SettingPage() {
             />
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={settings.enable_3_columns_in_oneday}
-              onChange={(e) => setSettings({ ...settings, enable_3_columns_in_oneday: e.target.checked })}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, enable_3_columns_in_oneday: checked === true })
+              }
             />
-            3 columns oneday
+            {t("set_checkbox_enable_3_columns_in_oneday")}
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={settings.use_similar_ch_char_to_search}
-              onChange={(e) => setSettings({ ...settings, use_similar_ch_char_to_search: e.target.checked })}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, use_similar_ch_char_to_search: checked === true })
+              }
             />
-            similar Chinese char search
+            {t("set_checkbox_use_similar_zh_char_to_search")}
           </label>
         </CardContent>
       </Card>
@@ -401,12 +505,12 @@ export default function SettingPage() {
             />
           </label>
           <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
+            <Checkbox
               checked={removePassword}
-              onChange={(e) => {
-                setRemovePassword(e.target.checked)
-                if (e.target.checked) setPassword("")
+              onCheckedChange={(checked) => {
+                const on = checked === true
+                setRemovePassword(on)
+                if (on) setPassword("")
               }}
             />
             {t("webui_pwd_remove")}
@@ -416,12 +520,25 @@ export default function SettingPage() {
         </CardContent>
       </Card>
 
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-base text-destructive">{t("webui_clear_data_title")}</CardTitle>
+          <CardDescription>{t("webui_clear_data_desc")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button type="button" variant="destructive" onClick={() => void openClearDialog()}>
+            <Trash2 className="size-4" />
+            {t("webui_clear_data_btn")}
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">About</CardTitle>
+          <CardTitle className="text-base">{t("webui_set_about")}</CardTitle>
           <CardDescription>
             v{about?.version}
-            {about?.new_version ? ` · new ${about.new_version}` : ""}
+            {about?.new_version ? ` · ${t("webui_set_new_version", { version: about.new_version })}` : ""}
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -437,6 +554,164 @@ export default function SettingPage() {
       <Button onClick={() => void save()} disabled={saving}>
         {saving ? "..." : t("text_apply_changes")}
       </Button>
+
+      <Dialog
+        open={clearOpen}
+        onOpenChange={(open) => {
+          setClearOpen(open)
+          if (!open) {
+            setClearStep("select")
+            setClearAck(false)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-lg" showCloseButton={!clearExecuting}>
+          {clearStep === "select" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("webui_clear_data_title")}</DialogTitle>
+                <DialogDescription>{t("webui_clear_confirm_hint")}</DialogDescription>
+              </DialogHeader>
+              {clearLoading || !clearPreview ? (
+                <p className="text-sm text-muted-foreground">{t("webui_clear_loading")}</p>
+              ) : (
+                <div className="space-y-3">
+                  {clearPreview.is_recording ? (
+                    <Alert variant="destructive">
+                      <AlertTitle>{t("webui_clear_recording")}</AlertTitle>
+                    </Alert>
+                  ) : null}
+                  <Alert variant="destructive">
+                    <AlertDescription>{t("webui_clear_permanent")}</AlertDescription>
+                  </Alert>
+                  <ul className="max-h-72 space-y-2 overflow-y-auto">
+                    {CLEAR_SCOPE_ORDER.map((id) => {
+                      const s = clearPreview.scopes[id]
+                      if (!s) return null
+                      const disabled = clearPreview.is_recording || s.file_count === 0
+                      return (
+                        <li key={id}>
+                          <label
+                            className={`flex items-start gap-2 rounded-lg border p-2 text-sm hover:bg-muted/50 ${
+                              disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
+                            }`}
+                          >
+                            <Checkbox
+                              className="mt-0.5"
+                              checked={Boolean(selectedScopes[id])}
+                              disabled={disabled}
+                              onCheckedChange={(checked) =>
+                                setSelectedScopes((prev) => ({
+                                  ...prev,
+                                  [id]: checked === true,
+                                }))
+                              }
+                            />
+                            <span className="min-w-0 flex-1">
+                              <span className="font-medium">{t(s.label_key)}</span>
+                              <span className="mt-0.5 block text-xs text-muted-foreground">
+                                {s.path_hint}
+                              </span>
+                              <span className="mt-0.5 block text-xs">
+                                {t("webui_clear_files_line", {
+                                  count: s.file_count,
+                                  size: s.human_size,
+                                })}
+                              </span>
+                            </span>
+                          </label>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  <p className="text-sm font-medium">
+                    {t("webui_clear_selected_summary", {
+                      count: selectedSummary.file_count,
+                      size: selectedSummary.human_size,
+                    })}
+                  </p>
+                </div>
+              )}
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={clearExecuting}
+                  onClick={() => setClearOpen(false)}
+                >
+                  {t("webui_clear_cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={
+                    clearLoading ||
+                    !clearPreview ||
+                    clearPreview.is_recording ||
+                    selectedScopeIds.length === 0
+                  }
+                  onClick={() => {
+                    if (selectedScopeIds.length === 0) {
+                      setError(t("webui_clear_empty"))
+                      return
+                    }
+                    setClearAck(false)
+                    setClearStep("ack")
+                  }}
+                >
+                  {t("webui_clear_next")}
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>{t("webui_clear_ack_title")}</DialogTitle>
+                <DialogDescription>{t("webui_clear_ack_desc")}</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-3">
+                <p className="text-sm">
+                  {t("webui_clear_selected_summary", {
+                    count: selectedSummary.file_count,
+                    size: selectedSummary.human_size,
+                  })}
+                </p>
+                <ul className="list-inside list-disc text-sm text-muted-foreground">
+                  {selectedScopeIds.map((id) => (
+                    <li key={id}>{t(`webui_clear_scope_${id}`)}</li>
+                  ))}
+                </ul>
+                <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-destructive/40 bg-destructive/5 p-3 text-sm">
+                  <Checkbox
+                    className="mt-0.5"
+                    checked={clearAck}
+                    onCheckedChange={(checked) => setClearAck(checked === true)}
+                  />
+                  <span className="font-medium text-destructive">{t("webui_clear_ack")}</span>
+                </label>
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={clearExecuting}
+                  onClick={() => setClearStep("select")}
+                >
+                  {t("webui_clear_cancel")}
+                </Button>
+                <Button
+                  type="button"
+                  variant="destructive"
+                  disabled={!clearAck || clearExecuting}
+                  onClick={() => void executeClear()}
+                >
+                  {clearExecuting ? "..." : t("webui_clear_execute")}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

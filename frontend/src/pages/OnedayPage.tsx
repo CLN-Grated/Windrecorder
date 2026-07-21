@@ -394,6 +394,9 @@ export function OnedayPage() {
                 className="aspect-video w-full rounded-lg bg-black object-contain"
                 src={`${locate.video_url}#t=${Math.max(0, locate.start_seconds ?? 0)}`}
                 controls
+                controlsList="nodownload"
+                preload="metadata"
+                playsInline
                 autoPlay
               />
             ) : null}

@@ -107,8 +107,8 @@ export default function RecordingPage() {
     { label: t("rs_text_record_mode_option_ffmpeg"), value: "ffmpeg" },
   ]
   const ocrStrategyItems = [
-    { label: "manual", value: "0" },
-    { label: "auto", value: "1" },
+    { label: t("rs_text_ocr_manual_update"), value: "0" },
+    { label: t("rs_text_ocr_auto_update"), value: "1" },
   ]
   const recordEncoderItems = encoders.map((e) => ({ label: e, value: e }))
   const compressEncoderItems = compressEncoders.map((e) => ({ label: e, value: e }))
@@ -125,7 +125,7 @@ export default function RecordingPage() {
       </Alert>
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("webui_error")}</AlertTitle>
           <AlertDescription className="break-all">{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -140,7 +140,7 @@ export default function RecordingPage() {
           <CardTitle className="text-base">
             <I18nMarkdown k="rs_md_record_setting_title" variant="sectionTitle" />
           </CardTitle>
-          <CardDescription>Core capture options</CardDescription>
+          <CardDescription>{t("webui_rs_core_capture")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="flex items-center gap-2 text-sm">
@@ -200,7 +200,7 @@ export default function RecordingPage() {
               checked={settings.record_deep_linking}
               onChange={(e) => setSettings({ ...settings, record_deep_linking: e.target.checked })}
             />
-            deep linking
+            {t("rs_checkbox_record_deep_linking")}
           </label>
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -213,10 +213,10 @@ export default function RecordingPage() {
                 })
               }
             />
-            foreground only
+            {t("rs_checkbox_record_screenshot_method_capture_foreground_window_only")}
           </label>
           <label className="text-sm md:col-span-2">
-            exclude words
+            {t("rs_text_skip_recording_by_wintitle")}
             <Input value={excludeText} onChange={(e) => setExcludeText(e.target.value)} />
           </label>
         </CardContent>
@@ -230,7 +230,7 @@ export default function RecordingPage() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
-            OCR index strategy
+            {t("rs_selectbox_ocr_strategy")}
             <Select
               items={ocrStrategyItems}
               value={String(settings.OCR_index_strategy)}
@@ -253,7 +253,7 @@ export default function RecordingPage() {
             </Select>
           </label>
           <label className="text-sm">
-            store days
+            {t("set_input_video_hold_days")}
             <Input
               type="number"
               value={settings.vid_store_day}
@@ -261,7 +261,7 @@ export default function RecordingPage() {
             />
           </label>
           <label className="text-sm">
-            compress days
+            {t("rs_input_vid_compress_time")}
             <Input
               type="number"
               value={settings.vid_compress_day}
@@ -269,7 +269,7 @@ export default function RecordingPage() {
             />
           </label>
           <label className="text-sm">
-            record encoder
+            {t("rs_text_record_encoder")}
             <Select
               items={recordEncoderItems}
               value={settings.record_encoder}
@@ -292,7 +292,7 @@ export default function RecordingPage() {
             </Select>
           </label>
           <label className="text-sm">
-            compress encoder
+            {t("rs_text_compress_encoder")}
             <Select
               items={compressEncoderItems}
               value={settings.compress_encoder}
@@ -315,7 +315,7 @@ export default function RecordingPage() {
             </Select>
           </label>
           <label className="text-sm">
-            bitrate
+            {t("rs_text_record_bitrate")}
             <Input
               type="number"
               value={settings.record_bitrate}

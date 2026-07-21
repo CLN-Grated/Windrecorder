@@ -142,7 +142,7 @@ export default function StatePage() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Error</AlertTitle>
+          <AlertTitle>{t("webui_error")}</AlertTitle>
           <AlertDescription className="break-all">{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -178,7 +178,7 @@ export default function StatePage() {
           <CardTitle className="text-base">
             <I18nMarkdown k="stat_md_memory_title" variant="sectionTitle" />
           </CardTitle>
-          <CardDescription>Lightbox / Wordcloud</CardDescription>
+          <CardDescription>{t("webui_stat_memory_desc")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">

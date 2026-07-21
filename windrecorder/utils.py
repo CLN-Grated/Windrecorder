@@ -610,19 +610,23 @@ def get_os_support_lang():
     return extracted_lines
 
 
+# 单语中文文案表（languages.json 已扁平化为 key → 中文）
 with open(os.path.join(config.config_src_dir, "languages.json"), encoding="utf-8") as f:
-    d_lang = json.load(f)
+    _zh_messages = json.load(f)
+
+# 兼容仍读取 d_lang[lang] / lang_map 的 legacy Streamlit 代码；内容均为中文
+d_lang = {
+    "sc": _zh_messages,
+    "en": _zh_messages,
+    "ja": _zh_messages,
+    "lang_map": {"sc": "简体中文"},
+}
 
 
 def get_text(text_key):
-    fallback_copy = f"({text_key}) not found in i18n, please feedback to contributors."
-    if text_key in d_lang[config.lang]:
-        return d_lang[config.lang].get(text_key, fallback_copy)
-    else:
-        if text_key in d_lang["en"]:
-            return d_lang["en"].get(text_key, fallback_copy)
-        else:
-            return fallback_copy
+    """返回中文文案；产品已取消多语言 i18n。"""
+    fallback_copy = f"({text_key}) 未找到对应文案"
+    return _zh_messages.get(text_key, fallback_copy)
 
 
 # 查找db字典中最早一项的key值

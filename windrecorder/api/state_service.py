@@ -4,11 +4,11 @@ import calendar
 import datetime
 import os
 from typing import Any
-from urllib.parse import quote
 
 import pandas as pd
 
 from windrecorder import file_utils, state, utils, wordcloud
+from windrecorder.api.oneday_service import media_file_url
 from windrecorder.config import config
 from windrecorder.db_manager import db_manager
 from windrecorder.logger import get_logger
@@ -17,7 +17,7 @@ logger = get_logger(__name__)
 
 
 def _media_file_url(path: str) -> str:
-    return f"/media/file?path={quote(os.path.abspath(path), safe='')}"
+    return media_file_url(path)
 
 
 def get_available_range() -> dict[str, Any]:

@@ -15,7 +15,6 @@ from windrecorder import __version__
 from windrecorder.api import (
     auth,
     config_service,
-    i18n_service,
     oneday_service,
     recording_service,
     search_service,
@@ -71,7 +70,7 @@ def create_app() -> FastAPI:
         return HealthResponse(
             ok=True,
             version=__version__,
-            lang=config.lang,
+            lang="sc",
             webui_backend=getattr(config, "webui_backend", "fastapi"),
         )
 
@@ -97,10 +96,6 @@ def create_app() -> FastAPI:
         auth.revoke_token(auth.read_token_from_request(request))
         auth.clear_auth_cookie(response)
         return {"ok": True, "authenticated": False}
-
-    @app.get("/api/i18n")
-    def api_i18n(lang: str | None = Query(None, description="Override language code")):
-        return i18n_service.get_messages(lang)
 
     @app.get("/api/config/public")
     def api_config_public():
@@ -255,21 +250,50 @@ def create_app() -> FastAPI:
     def setting_about():
         return setting_service.get_about()
 
+    @app.get("/api/setting/clear-data/preview")
+    def setting_clear_data_preview():
+        return setting_service.get_clear_data_preview()
+
+    @app.post("/api/setting/clear-data")
+    def setting_clear_data(payload: dict):
+        scopes = payload.get("scopes") or []
+        if not isinstance(scopes, list):
+            raise HTTPException(status_code=400, detail="scopes must be a list")
+        confirm = bool(payload.get("confirm"))
+        result = setting_service.clear_local_data([str(s) for s in scopes], confirm=confirm)
+        if not result.get("ok") and result.get("error") == "recording":
+            raise HTTPException(status_code=409, detail=result.get("detail") or "recording")
+        if not result.get("ok") and result.get("error") in ("confirm_required", "empty_scopes", "invalid_scopes"):
+            raise HTTPException(status_code=400, detail=result.get("detail") or result.get("error"))
+        return result
+
     @app.get("/media/video/{filename}")
     def media_video(filename: str):
         path = oneday_service.resolve_video_path(filename)
         if not path:
             raise HTTPException(status_code=404, detail="video not found")
         media_type = mimetypes.guess_type(path)[0] or "video/mp4"
-        return FileResponse(path, media_type=media_type, filename=os.path.basename(path))
+        # inline：供 HTML5 <video> 页内播放；attachment 易被 IDM 等下载器劫持导致灰屏
+        return FileResponse(
+            path,
+            media_type=media_type,
+            filename=os.path.basename(path),
+            content_disposition_type="inline",
+        )
 
-    @app.get("/media/file")
-    def media_file(path: str = Query(...)):
-        resolved = oneday_service.resolve_allowed_file_path(path)
+    @app.get("/media/file/{token}/{filename}")
+    def media_file(token: str, filename: str):
+        """Path-based media URL: last segment is real filename (mobile download / tab title)."""
+        resolved = oneday_service.resolve_media_file_token(token, filename)
         if not resolved:
             raise HTTPException(status_code=404, detail="file not found or not allowed")
         media_type = mimetypes.guess_type(resolved)[0] or "application/octet-stream"
-        return FileResponse(resolved, media_type=media_type, filename=os.path.basename(resolved))
+        return FileResponse(
+            resolved,
+            media_type=media_type,
+            filename=os.path.basename(resolved),
+            content_disposition_type="inline",
+        )
 
     # SPA static hosting (production build)
     if FRONTEND_DIST.exists():

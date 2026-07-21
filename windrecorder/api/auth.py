@@ -144,7 +144,6 @@ def is_public_path(path: str) -> bool:
         "/api/auth/status",
         "/api/auth/login",
         "/api/auth/logout",
-        "/api/i18n",
     ):
         return True
     if path.startswith("/assets/"):

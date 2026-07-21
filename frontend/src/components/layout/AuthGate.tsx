@@ -67,7 +67,7 @@ export function AuthGate({ children }: { children: ReactNode }) {
           <CardContent className="space-y-3">
             {error ? (
               <Alert variant="destructive">
-                <AlertTitle>Error</AlertTitle>
+                <AlertTitle>{t("webui_error")}</AlertTitle>
                 <AlertDescription className="break-all">{error}</AlertDescription>
               </Alert>
             ) : null}
