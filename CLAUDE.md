@@ -6,6 +6,54 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 - 不允许调用子代理（subagent）。所有任务必须由主代理直接完成。
 
+## Agent pitfalls / 易错约定（Windrecorder）
+
+本仓库多进程 + 双轨 WebUI，下列约定避免反复踩坑：
+
+### 新 WebUI：改 `frontend/src` 必须构建
+
+- 生产由 `api_server` 提供 **`frontend/dist`**（gitignore，**不进 git**）。
+- 改 React/TS 后必须：`cd frontend && pnpm install && pnpm run build`。
+- 未 build = 用户仍跑旧 bundle；手测/验收前确认 dist 已更新（或硬刷新）。
+- 开发可用 `pnpm run dev` + API；勿与「只改 src 却打开 dist 服务」混淆。
+
+### 多进程与「是否在录制」
+
+- 托盘 `main.py` 的 `recording_process` **仅内存**；API / 清除门禁看 **锁文件 PID + 进程存活**，以及 `recording_lifecycle` 状态文件。
+- 改停录、清除数据门禁时勿只改托盘变量。
+- 已在跑的 `record_screen` **不会**加载新代码；测协作停录须重启录制进程。
+
+### pystray 回调禁止长阻塞
+
+- 托盘菜单回调里 **禁止** 长时间 `wait` / `sleep` / 同步重活。
+- 协作停录的 `wait` 放 **后台线程**；回调只发 stop 请求 + Toast 后立刻 return。
+- 否则托盘无响应，结果 Toast 也发不出去。
+
+### 停录语义边界
+
+| 入口 | 行为 |
+|------|------|
+| 托盘「暂停记录」 | **协作**：stop 请求 + 片段边界退出，默认不 `taskkill` |
+| 托盘「退出」/ Ctrl+C | **强制**：`taskkill /PID /T /F` + 清锁 + `os._exit` |
+
+状态源：`cache/locks/recording_status.json`、`RECORD_STOP_REQUESTED`（`windrecorder/recording_lifecycle.py`）。
+
+### 托盘启动路径：控制导入成本
+
+- `main.py` **不要**顶层 `import streamlit`（Streamlit 为 optional extra `legacy-webui`）。
+- 勿在托盘热路径顶层拉重 UI 库；弹窗类依赖应懒加载。
+- Streamlit 仅用于 `webui.py` / `windrecorder/ui/*` / extension；共享模块对 `st` 用函数内懒加载。
+
+### 前端门禁 UI 与轮询
+
+- 对话框依赖「外部进程状态」时：**open 期间持续轮询**，不能只在打开时拉一次。
+- 多状态 tip 优先级：**busy**（录制 / 停止中 / 保存中）> 成功绿 tip，避免 `sawX` 类标志盖住当前 busy。
+
+### Windows 进程清理
+
+- 强制杀进程优先 `taskkill /PID /T /F`；「进程不存在」应静默/debug，勿刷控制台。
+- 勿提交 `userdata/`、`cache/` 等运行时目录。
+
 ## Git Commits
 
 ### 语言与风格
@@ -70,7 +118,7 @@ uv run --locked main.py
 # Web UI only (legacy Streamlit)
 uv run --locked streamlit run webui.py
 
-# Web UI Next (FastAPI + frontend/dist; build frontend first)
+# Web UI Next (FastAPI + frontend/dist; **must build after any frontend/src change**)
 cd frontend && pnpm install && pnpm run build && cd ..
 uv run --locked python api_server.py
 # Dev: API on 17831 + Vite HMR (proxies /api /media)
@@ -80,6 +128,8 @@ uv run --locked python api_server.py
 # Recording daemon only
 uv run --locked record_screen.py
 ```
+
+**Frontend delivery:** `frontend/dist` is gitignored. After editing `frontend/src`, always `pnpm run build` before validating via tray/`api_server` SPA. Hard-refresh the browser if the UI looks stale.
 
 Logs land under `cache/logs/` (`webui.log`, `recording.log`, etc.).
 
@@ -116,12 +166,13 @@ start_app.bat
 ```
 
 - `main.py` owns tray lifecycle, starts/stops FastAPI/Streamlit and recording processes, scrapes stdout for `Local URL:` / `Network URL:`, uses `FileLock` on `config.tray_lock_path` to prevent double-start. `config.webui_backend` (`fastapi`|`streamlit`) sets which open-URL menu item is the tray default.
-- `record_screen.py` holds `config.record_lock_path`, runs capture + idle-maintenance threads, and restarts crashed worker threads.
-- `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()`.
+- **Pause recording** is cooperative (`recording_lifecycle` stop request + segment boundary). **Tray exit / Ctrl+C** force-kills children (`taskkill /T /F`) and clears locks.
+- `record_screen.py` holds `config.record_lock_path`, runs capture + idle-maintenance threads, restarts crashed workers, and honors cooperative stop.
+- `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()` (optional extra `legacy-webui`).
 - `api_server.py` / `windrecorder/api/` is the FastAPI layer reusing `oneday`, `db_manager`, etc.; SPA static files from `frontend/dist`.
-- `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui (`--preset b27GcrRo`). Phase 1: Oneday page only.
+- `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui. Copy for new WebUI often lives in `frontend/src/lib/zh-messages.ts`.
 
-Do not assume a single process; state shared between tray/recorder/webui is files + SQLite + locks under `cache/locks/`.
+Do not assume a single process; state shared between tray/recorder/webui is files + SQLite + locks under `cache/locks/` (including `recording_status.json` / `RECORD_STOP_REQUESTED`).
 
 ### Package layout (`windrecorder/`)
 
@@ -132,17 +183,18 @@ Do not assume a single process; state shared between tray/recorder/webui is file
 | `db_manager.py` | Monthly SQLite DBs (`db/` → `user_YYYY-MM_wind.db`), table `video_text`, search/pagination. Singleton: `db_manager`. |
 | `ocr_manager.py` | Multi-engine OCR dispatch (`ocr_image`), video iframe extract → OCR → DB write (`ocr_manager_main` / `ocr_process_single_video`), similarity dedup. |
 | `record.py` | Two capture modes: `record_screen_via_ffmpeg` and `record_screen_via_screenshot_process`; screenshot cache → video; compress/clean outdated videos. |
+| `recording_lifecycle.py` | Cross-process recording status + cooperative stop request files for tray/API/WebUI. |
 | `record_wintitle.py` | Foreground window title / deep-linking capture. |
 | `img_embed_manager.py` | Optional UForm + FAISS image/text embeddings (`db_imgemb/`). Only import when `config.img_embed_module_install`. |
 | `llm.py` | OpenAI-compatible client (`request_llm_one_shot`), day tags / day poems. |
 | `oneday.py` / `state.py` / `wordcloud.py` | Day timeline, stats/lightbox, wordcloud. |
-| `utils.py` | i18n (`get_text` as `_t`), time/path/display helpers, ffmpeg checks. |
+| `utils.py` | i18n (`get_text` as `_t`), time/path/display helpers, ffmpeg checks, `kill_recording`. |
 | `lock.py` / `logger.py` / `file_utils.py` | Cross-process locks, logging, filesystem helpers. |
 | `ui/` | Streamlit tabs: `oneday`, `search`, `state`, `lab`, `recording`, `setting`, shared `components`. |
-| `api/` | FastAPI app (`app.py`), Oneday service/schemas; media + SPA hosting. |
+| `api/` | FastAPI app (`app.py`), Oneday/recording/setting services; media + SPA hosting. |
 | `upgrade_migration_routine.py` | One-shot migrations on upgrade / onboard. |
 
-Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `record_screen.py`, `onboard_setting.py`. Frontend app: `frontend/` (npm).
+Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `record_screen.py`, `onboard_setting.py`. Frontend app: `frontend/` (pnpm).
 
 ### Data flow
 
@@ -174,8 +226,9 @@ Moving the install: delete `.venv`, relocate folder (keep `userdata` + data dirs
 - Defaults: `windrecorder/config_src/config_default.json`
 - User file created/merged at runtime: `userdata/config_user.json`
 - On upgrade, `update_config_files_from_default_to_user()` adds new keys and drops removed ones.
-- i18n strings: `windrecorder/config_src/languages.json` (`en` / `sc` / `ja`); UI copy via `_t("key")`.
+- i18n: Streamlit / tray often use `windrecorder/config_src/languages.json` via `_t("key")` (product is Chinese-first). New WebUI also uses `frontend/src/lib/zh-messages.ts`.
 - Record/compress FFmpeg presets: `record_preset.json`, `video_compress_preset.json`.
+- Core Python deps do **not** require Streamlit; optional extra: `uv sync --locked --extra legacy-webui`.
 
 Key config fields agents touch often: `record_mode`, `ocr_engine`, `support_ocr_lst`, `OCR_index_strategy`, `enable_img_embed_search`, `img_embed_module_install`, `open_ai_*`, `exclude_words`, `multi_display_record_strategy`.
 
@@ -219,12 +272,13 @@ if config.img_embed_module_install:
 
 - **Line length 127**, Black + isort (black profile); flake8 ignores `E501,E203,W503`.
 - **Never reformat or commit binary/vendored trees**: `ocr_lib/`, user `userdata/`, `wxocr-binary/`, etc.
-- Prefer existing helpers in `file_utils`, `utils`, `db_manager` over new ad-hoc path/SQL logic.
-- User-facing strings go through `_t("key")` and `languages.json` (en/sc/ja) when adding UI copy.
-- Cross-process exclusivity: use `FileLock` from `windrecorder.lock` (same pattern as tray/record/img_emb locks).
+- Prefer existing helpers in `file_utils`, `utils`, `db_manager`, `recording_lifecycle` over new ad-hoc path/SQL/status logic.
+- User-facing strings: Streamlit/tray via `_t("key")` + `languages.json`; new WebUI often via `zh-messages.ts`. Keep languages consistent when adding copy.
+- Cross-process exclusivity: use `FileLock` from `windrecorder.lock` (same pattern as tray/record/img_emb locks). Recording busy/clear gates should reuse `recording_lifecycle.get_public_status()` where possible.
 - DB schema evolution: extend via `db_manager.db_ensure_row_exist` / `db_update_table_product_routine`, not one-off ALTER scripts users must run.
 - Comments and many log messages are bilingual or Chinese-first; match surrounding file language rather than rewriting wholesale.
 - Windows-only APIs (`pywin32`, `mss`, `uiautomation`, `Windows.Media.Ocr.Cli`) — do not introduce cross-platform abstractions unless asked.
+- Complex changes: prefer **separate commits by concern** when the user asks（例如 backend / tray / frontend 拆分）.
 
 ## Debug / operational triggers
 
