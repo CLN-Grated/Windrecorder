@@ -340,15 +340,31 @@ def get_days_in_month(year, month):
 def kill_recording():
     try:
         with open(config.record_lock_path, encoding="utf-8") as f:
-            check_pid = int(f.read())
+            raw = f.read().strip()
+        check_pid = int(raw)
+    except FileNotFoundError:
+        logger.debug("utils: Unable to find process lock.")
+        return
+    except ValueError:
+        logger.debug("utils: Invalid record lock content.")
+        return
+
+    # 进程可能已退出：静默 taskkill，避免控制台刷「没有找到进程」
+    try:
         check_result = subprocess.run(
-            ["taskkill", "/pid", str(check_pid), "-t", "-f"],
+            ["taskkill", "/PID", str(check_pid), "/T", "/F"],
             stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
         )
-        logger.info(f"utils: The screen recording process has ended. {check_result.stdout}")
-    except FileNotFoundError:
-        logger.error("utils: Unable to find process lock.")
+        out = (check_result.stdout or "") + (check_result.stderr or "")
+        if check_result.returncode == 0:
+            logger.info(f"utils: The screen recording process has ended. {out.strip()}")
+        else:
+            # 128 等：进程不存在，属正常兜底
+            logger.debug(f"utils: taskkill pid={check_pid} rc={check_result.returncode} {out.strip()}")
+    except Exception as e:
+        logger.debug(f"utils: kill_recording failed: {e}")
 
 
 # 通过数据库内项目计算视频对应时间戳

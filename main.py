@@ -215,32 +215,201 @@ def start_stop_fastapi_webui(icon: pystray.Icon, item: pystray.MenuItem):
             )
 
 
+# 协作式停止录制：写 stop 请求，等子进程在片段边界收尾退出（默认不硬杀）
+RECORDING_STOP_GRACE_TIMEOUT = 120  # 秒；ffmpeg 段内会 terminate 当前段以尽快结束
+
+# pystray 图标引用：供 Ctrl+C 强制退出时 stop 托盘循环
+tray_icon: pystray.Icon | None = None
+_force_shutdown_done = False
+# 协作停录进行中（防托盘连点；wait 必须在后台线程，否则 pystray 菜单卡死）
+recording_stopping = False
+_recording_lock = threading.Lock()
+
+
+def _taskkill_tree(pid: int) -> None:
+    """Windows：强制结束进程树。"""
+    try:
+        subprocess.run(
+            ["taskkill", "/PID", str(pid), "/T", "/F"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+    except Exception as e:
+        logger.debug(f"taskkill {pid} failed: {e}")
+
+
+def _force_shutdown_children() -> None:
+    """托盘退出 / Ctrl+C：强制结束 WebUI 与录制子进程并清理锁状态。
+
+    与「暂停记录」协作式停录不同，此路径必须尽快干净退出。
+    """
+    global streamlit_process, fastapi_process, recording_process, _force_shutdown_done
+
+    if _force_shutdown_done:
+        return
+    _force_shutdown_done = True
+
+    if streamlit_process:
+        try:
+            if streamlit_process.pid:
+                _taskkill_tree(streamlit_process.pid)
+            streamlit_process.kill()
+        except Exception as e:
+            logger.debug(f"kill streamlit: {e}")
+        streamlit_process = None
+    if fastapi_process:
+        try:
+            if fastapi_process.pid:
+                _taskkill_tree(fastapi_process.pid)
+            fastapi_process.kill()
+        except Exception as e:
+            logger.debug(f"kill fastapi: {e}")
+        fastapi_process = None
+
+    # 1) 按 Popen 杀录制进程树
+    if recording_process is not None:
+        try:
+            if recording_process.poll() is None and recording_process.pid:
+                _taskkill_tree(recording_process.pid)
+            try:
+                recording_process.kill()
+            except Exception:
+                pass
+            try:
+                recording_process.wait(2)
+            except Exception:
+                pass
+        except Exception as e:
+            logger.debug(f"force kill recording_process: {e}")
+        recording_process = None
+
+    # 2) 按锁文件 PID 兜底（Popen 丢失 / 双实例残留）
+    try:
+        utils.kill_recording()
+    except Exception as e:
+        logger.debug(f"kill_recording: {e}")
+
+    # 3) 清理锁与生命周期状态
+    try:
+        if os.path.exists(config.record_lock_path):
+            os.remove(config.record_lock_path)
+    except OSError:
+        pass
+    try:
+        from windrecorder.recording_lifecycle import (
+            recording_stop_request_path,
+            reset_stop_flags,
+            write_status,
+        )
+
+        reset_stop_flags()
+        try:
+            sp = recording_stop_request_path()
+            if os.path.exists(sp):
+                os.remove(sp)
+        except OSError:
+            pass
+        write_status("idle", phase_message="idle", pid=None, source="force_shutdown")
+    except Exception as e:
+        logger.debug(f"lifecycle cleanup: {e}")
+
+
+def _cooperative_stop_worker(proc: Popen, icon: pystray.Icon | None) -> None:
+    """后台等待协作停录结束；禁止在 pystray 回调里同步 wait。"""
+    global recording_process, recording_stopping
+
+    try:
+        proc.wait(RECORDING_STOP_GRACE_TIMEOUT)
+        with _recording_lock:
+            if recording_process is proc:
+                recording_process = None
+        if icon is not None:
+            try:
+                icon.icon = get_tray_icon(state="record_pause")
+                icon.title = _t("tray_tip_record_pause")
+                # 第二次 Toast：结果通知
+                icon.notify(message="录制已停止", title=_t("tray_notify_title_record_pause"))
+            except Exception as e:
+                logger.debug(f"tray update after stop: {e}")
+        logger.info("cooperative stop: recording process exited")
+    except subprocess.TimeoutExpired:
+        if icon is not None:
+            try:
+                icon.notify(
+                    message="尝试停止超时，录制可能仍在保存中……未强制结束，以免损坏当前片段。",
+                    title="停止录制超时",
+                )
+            except Exception as e:
+                logger.debug(f"tray timeout notify: {e}")
+        logger.warning("cooperative stop: wait timed out, process may still be saving")
+    finally:
+        recording_stopping = False
+        if icon is not None:
+            try:
+                icon.update_menu()
+            except Exception:
+                pass
+
+
+def _begin_cooperative_stop(icon: pystray.Icon | None) -> None:
+    """在托盘回调里只发 stop 请求并启动后台 wait（立即返回）。"""
+    global recording_process, recording_stopping
+    from windrecorder.recording_lifecycle import request_stop
+
+    with _recording_lock:
+        if recording_stopping:
+            if icon is not None:
+                icon.notify(message="正在尝试停止录制……", title="正在尝试暂停录制")
+            return
+        proc = recording_process
+        if not proc:
+            return
+        recording_stopping = True
+
+    if icon is not None:
+        icon.notify(message="正在尝试停止录制……", title="正在尝试暂停录制")
+
+    request_stop(source="tray")
+    try:
+        proc.send_signal(signal.CTRL_BREAK_EVENT)
+    except Exception as e:
+        logger.debug(f"CTRL_BREAK send failed: {e}")
+
+    threading.Thread(
+        target=_cooperative_stop_worker,
+        args=(proc, icon),
+        daemon=True,
+        name="cooperative-stop-recording",
+    ).start()
+    if icon is not None:
+        try:
+            icon.update_menu()
+        except Exception:
+            pass
+
+
 # 开始/停止录制
 def start_stop_recording(icon: pystray.Icon | None = None, item: pystray.MenuItem | None = None):
-    global recording_process
+    global recording_process, recording_stopping
 
-    if recording_process:
-        # 如果已有进程在录制，则发送 CTRL_BREAK_EVENT 信号停止录制
-        recording_process.send_signal(signal.CTRL_BREAK_EVENT)
-        try:
-            # 等待录制进程停止，最长等待 RECORDING_STOP_TIMEOUT 秒
-            recording_process.wait(RECORDING_STOP_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            # 如果超时仍未停止，向用户发送通知，并强制终止进程
-            if icon:
-                icon.notify("Failed to exit the recording service gracefully. Killing it.")
-            recording_process.kill()
-        recording_process = None  # 清空录制进程变量
-        if icon is not None:
-            icon.icon = get_tray_icon(state="record_pause")
-            icon.title = _t("tray_tip_record_pause")
-            icon.notify(message=_t("tray_notify_text_start_without_record"), title=_t("tray_notify_title_record_pause"))
+    with _recording_lock:
+        has_proc = recording_process is not None
+        stopping = recording_stopping
+
+    if has_proc or stopping:
+        # 已有录制或正在协作停录：异步尝试停止，绝不在回调里 wait
+        _begin_cooperative_stop(icon)
     else:
         # 如果录制进程不存在，则启动录制进程
+        from windrecorder.recording_lifecycle import reset_stop_flags, write_status
+
+        reset_stop_flags()
+        write_status("recording", phase_message="recording", source="tray")
         with open(RECORDING_STDOUT_PATH, "w", encoding="utf-8") as out, open(
             RECORDING_STDERR_PATH, "w", encoding="utf-8"
         ) as err:
-            recording_process = Popen(
+            proc = Popen(
                 [sys.executable, "-u", "record_screen.py"],
                 stdout=out,
                 stderr=err,
@@ -248,6 +417,9 @@ def start_stop_recording(icon: pystray.Icon | None = None, item: pystray.MenuIte
                 cwd=PROJECT_ROOT,
                 creationflags=subprocess.CREATE_NEW_PROCESS_GROUP,
             )
+        with _recording_lock:
+            recording_process = proc
+            recording_stopping = False
         if icon is not None:
             icon.icon = get_tray_icon(state="recording")
             icon.title = _t("tray_tip_record")
@@ -297,9 +469,15 @@ def menu_callback():
             visible=lambda item: bool(webui_network_url) and streamlit_process,
             enabled=False,
         ),
-        # 开始或停止录制选项
+        # 开始或停止录制选项（停录中禁用，避免连点；退出始终可用）
         pystray.MenuItem(
-            lambda item: _t("tray_record_stop") if recording_process else _t("tray_record_start"), start_stop_recording
+            lambda item: (
+                "⏳ 正在停止…"
+                if recording_stopping
+                else (_t("tray_record_stop") if recording_process else _t("tray_record_start"))
+            ),
+            start_stop_recording,
+            enabled=lambda item: not recording_stopping,
         ),
         # 分隔线
         pystray.Menu.SEPARATOR,
@@ -324,25 +502,23 @@ def menu_callback():
     )
 
 
-# 处理退出操作
+# 处理退出操作（强制：与 Ctrl+C 相同）
 def on_exit(icon: pystray.Icon, item: pystray.MenuItem):
-    # 如果存在 Web UI 进程，则强制终止它
-    if streamlit_process:
-        streamlit_process.kill()
-    if fastapi_process:
-        fastapi_process.kill()
-
-    # 如果存在录制进程，则发送 CTRL_BREAK_EVENT 信号停止录制
-    if recording_process:
-        recording_process.send_signal(signal.CTRL_BREAK_EVENT)
-        # 超时未停止进程则强行终止
-        try:
-            recording_process.wait(RECORDING_STOP_TIMEOUT)
-        except subprocess.TimeoutExpired:
-            recording_process.kill()
-
-    # 停止系统托盘图标
-    icon.stop()
+    global tray_icon
+    tray_icon = icon
+    logger.info("tray exit: force shutdown children")
+    _force_shutdown_children()
+    try:
+        icon.stop()
+    except Exception as e:
+        logger.debug(f"icon.stop: {e}")
+    try:
+        if os.path.exists(config.tray_lock_path):
+            os.remove(config.tray_lock_path)
+    except OSError:
+        pass
+    # 托盘退出也立刻结束进程，避免 pystray 卡在 run
+    os._exit(0)
 
 
 def interrupt_start():
@@ -379,6 +555,8 @@ def hide_cli_window():
 
 
 def main():
+    global tray_icon
+
     # 启动时加锁，防止重复启动
     while True:
         try:
@@ -411,7 +589,7 @@ def main():
         credential_path = _streamlit_credentials_path()
         if not os.path.exists(credential_path):
             os.makedirs(os.path.dirname(credential_path), exist_ok=True)
-            shutil.copyfile(os.path.join(PROJECT_ROOT, ".streamlit\\credentials.toml"), credential_path)
+            shutil.copyfile(os.path.join(PROJECT_ROOT, ".streamlit", "credentials.toml"), credential_path)
 
         tray_icon_init = get_tray_icon(state="record_pause")
         tray_title_init = _t("tray_tip_record_pause")
@@ -420,12 +598,72 @@ def main():
             tray_icon_init = get_tray_icon(state="recording")
             tray_title_init = _t("tray_tip_record")
 
-        pystray.Icon(
+        def _hard_exit(code: int = 0) -> None:
+            """强制结束本进程（pystray 常拦截 SystemExit / 不离开 run）。"""
+            _force_shutdown_children()
+            # 再删 tray 锁，避免「already running」
+            try:
+                if os.path.exists(config.tray_lock_path):
+                    os.remove(config.tray_lock_path)
+            except OSError:
+                pass
+            os._exit(code)
+
+        def _on_console_interrupt(signum, frame):
+            # Ctrl+C / 控制台中断：强制退出（与托盘「退出」相同）
+            logger.info(f"console interrupt signal={signum}, force shutdown")
+            icon = tray_icon
+            if icon is not None:
+                try:
+                    icon.stop()
+                except Exception:
+                    pass
+            _hard_exit(0)
+
+        for sig_name in ("SIGINT", "SIGTERM"):
+            sig = getattr(signal, sig_name, None)
+            if sig is None:
+                continue
+            try:
+                signal.signal(sig, _on_console_interrupt)
+            except (ValueError, OSError) as e:
+                logger.debug(f"cannot install {sig_name}: {e}")
+
+        # Windows 控制台关闭 / Ctrl+C 有时不进 signal.signal；再挂一层
+        try:
+            import win32api  # type: ignore
+
+            def _win_ctrl_handler(ctrl_type):
+                # 0=Ctrl+C, 1=Ctrl+Break, 2=Close, 5=Logoff, 6=Shutdown
+                if ctrl_type in (0, 1, 2, 5, 6):
+                    logger.info(f"SetConsoleCtrlHandler ctrl_type={ctrl_type}, force shutdown")
+                    # 必须尽快 _exit；return True 表示已处理，避免默认继续
+                    _hard_exit(0)
+                    return True
+                return False
+
+            win32api.SetConsoleCtrlHandler(_win_ctrl_handler, True)
+        except Exception as e:
+            logger.debug(f"SetConsoleCtrlHandler unavailable: {e}")
+
+        tray_icon = pystray.Icon(
             "Windrecorder",
             tray_icon_init,
             title=tray_title_init,
             menu=pystray.Menu(menu_callback),
-        ).run(setup=setup)
+        )
+        try:
+            tray_icon.run(setup=setup)
+        except (KeyboardInterrupt, SystemExit):
+            pass
+        finally:
+            # 任意离开 run：确保子进程被强制清理
+            _force_shutdown_children()
+            try:
+                if os.path.exists(config.tray_lock_path):
+                    os.remove(config.tray_lock_path)
+            except OSError:
+                pass
 
 
 if __name__ == "__main__":
