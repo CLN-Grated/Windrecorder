@@ -396,5 +396,6 @@
   "webui_stat_memory_desc": "光影橱窗 / 词云",
   "webui_tip_go_settings": "前往设置",
   "webui_tip_no_password_public_desc": "当前访问地址不是 localhost / 内网地址。未设置密码时，能访问该 WebUI 的人可能看到你的数据。请在「设置」中设置密码，或仅将 API 绑定到 127.0.0.1。",
-  "webui_tip_no_password_public_title": "尚未设置访问密码"
+  "webui_tip_no_password_public_title": "尚未设置访问密码",
+  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。"
 }

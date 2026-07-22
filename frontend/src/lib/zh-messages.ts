@@ -232,5 +232,6 @@ export const ZH_MESSAGES: Record<string, string> = {
   "webui_footer_videos": "视频 {count} 个 · {size} GB",
   "webui_badge_video": "视频",
   "webui_badge_text": "仅文本",
-  "lb_checkbox_add_watermark": "为光箱图片添加底部水印"
+  "lb_checkbox_add_watermark": "为光箱图片添加底部水印",
+  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。"
 }

@@ -113,6 +113,8 @@ export default function SettingPage() {
   const [clearExecuting, setClearExecuting] = useState(false)
   const [selectedScopes, setSelectedScopes] = useState<Record<string, boolean>>({})
   const [clearAck, setClearAck] = useState(false)
+  /** 打开清除对话框时是否曾检测到录制；停录后用于显示绿色 tip */
+  const [clearSawRecording, setClearSawRecording] = useState(false)
 
   const load = async () => {
     const [opts, ab] = await Promise.all([api.settingOptions(), api.settingAbout()])
@@ -227,12 +229,14 @@ export default function SettingPage() {
     setClearOpen(true)
     setClearStep("select")
     setClearAck(false)
+    setClearSawRecording(false)
     setClearLoading(true)
     setClearPreview(null)
     setError(null)
     try {
       const preview = await api.settingClearDataPreview()
       setClearPreview(preview)
+      if (preview.is_recording) setClearSawRecording(true)
       const next: Record<string, boolean> = {}
       for (const id of CLEAR_SCOPE_ORDER) {
         next[id] = false
@@ -245,6 +249,21 @@ export default function SettingPage() {
       setClearLoading(false)
     }
   }
+
+  // 清除对话框打开且正在录制时轮询 preview：停录后自动放行，无需重开 dialog
+  useEffect(() => {
+    if (!clearOpen || !clearPreview?.is_recording) return
+    const id = window.setInterval(() => {
+      api
+        .settingClearDataPreview()
+        .then((preview) => {
+          setClearPreview(preview)
+          if (preview.is_recording) setClearSawRecording(true)
+        })
+        .catch(() => {})
+    }, 500)
+    return () => window.clearInterval(id)
+  }, [clearOpen, clearPreview?.is_recording])
 
   const selectedScopeIds = useMemo(
     () => CLEAR_SCOPE_ORDER.filter((id) => selectedScopes[id]),
@@ -805,6 +824,7 @@ export default function SettingPage() {
           if (!open) {
             setClearStep("select")
             setClearAck(false)
+            setClearSawRecording(false)
           }
         }}
       >
@@ -822,6 +842,10 @@ export default function SettingPage() {
                   {clearPreview.is_recording ? (
                     <Alert variant="destructive">
                       <AlertTitle>{t("webui_clear_recording")}</AlertTitle>
+                    </Alert>
+                  ) : clearSawRecording ? (
+                    <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                      <AlertTitle>{t("webui_clear_recording_stopped")}</AlertTitle>
                     </Alert>
                   ) : null}
                   <Alert variant="destructive">
