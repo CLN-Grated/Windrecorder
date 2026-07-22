@@ -3,7 +3,6 @@ import os
 
 import customtkinter
 import pandas as pd
-import streamlit as st
 from PIL import Image, ImageDraw
 from send2trash import send2trash
 
@@ -241,6 +240,7 @@ class Flag_mark_window(customtkinter.CTk):
 
 # ------------streamlit component
 def st_update_df_flag_mark_note():
+    import streamlit as st  # lazy, legacy Streamlit UI only
     """
     更新 streamlit 状态中，时间标记清单表的状态
     """
@@ -332,6 +332,7 @@ def st_tweak_df_flag_mark_note_to_display(df_origin):
 
 
 def st_create_timestamp_flag_mark_note_from_oneday_timeselect():
+    import streamlit as st  # lazy, legacy Streamlit UI only
     """
     为一日之时正在选择的时间创建时间戳
     """
@@ -358,6 +359,7 @@ def st_create_timestamp_flag_mark_note_from_oneday_timeselect():
 
 # 旗标组件
 def component_flag_mark():
+    import streamlit as st  # lazy, legacy Streamlit UI only
     st.button(
         "🚩" + _t("oneday_btn_add_flag_mark_from_select_time"),
         use_container_width=True,

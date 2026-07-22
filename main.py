@@ -17,7 +17,6 @@ import requests
 import win32con
 import win32gui
 from PIL import Image
-from streamlit.file_util import get_streamlit_file_path
 
 PROJECT_ROOT = os.path.abspath(os.path.dirname(__file__))
 os.chdir(PROJECT_ROOT)
@@ -31,6 +30,21 @@ from windrecorder.logger import get_logger  # NOQA: E402
 from windrecorder.utils import get_text as _t  # NOQA: E402
 
 logger = get_logger(__name__)
+
+
+def _streamlit_credentials_path() -> str:
+    """Streamlit credentials.toml 默认路径（避免 import streamlit 拖慢托盘启动）。"""
+    return os.path.join(os.path.expanduser("~"), ".streamlit", "credentials.toml")
+
+
+def _streamlit_available() -> bool:
+    try:
+        import importlib.util
+
+        return importlib.util.find_spec("streamlit") is not None
+    except Exception:
+        return False
+
 
 # 定义存储标准输出的日志文件路径
 WEBUI_STDOUT_PATH = os.path.join(config.log_dir, "webui.log")
@@ -118,7 +132,7 @@ def _wait_url_from_log(log_path: str, timeout: int):
     return local_url, network_url
 
 
-# 启动/停止 Streamlit webui 服务（旧界面，双轨保留）
+# 启动/停止 Streamlit webui 服务（旧界面，双轨保留；依赖 optional extra: legacy-webui）
 def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
     global streamlit_process, webui_local_url, webui_network_url
     if streamlit_process:
@@ -127,6 +141,12 @@ def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
         webui_local_url = ""
         webui_network_url = ""
     else:
+        if not _streamlit_available():
+            icon.notify(
+                "Legacy Streamlit WebUI is not installed. Run: uv sync --extra legacy-webui",
+                title="Streamlit missing",
+            )
+            return
         with open(WEBUI_STDOUT_PATH, "w", encoding="utf-8") as out, open(WEBUI_STDERR_PATH, "w", encoding="utf-8") as err:
             streamlit_process = Popen(
                 [
@@ -406,7 +426,7 @@ def main():
         if not ff_available:
             interrupt_start_no_ffmpeg_and_ffprobe(ff_callback)
 
-        credential_path = get_streamlit_file_path("credentials.toml")
+        credential_path = _streamlit_credentials_path()
         if not os.path.exists(credential_path):
             os.makedirs(os.path.dirname(credential_path), exist_ok=True)
             shutil.copyfile(os.path.join(PROJECT_ROOT, ".streamlit\\credentials.toml"), credential_path)

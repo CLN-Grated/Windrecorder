@@ -7,7 +7,6 @@ import re
 import pandas as pd
 import psutil
 import pygetwindow
-import streamlit as st
 import uiautomation as auto
 import win32gui
 import win32process
@@ -290,9 +289,11 @@ def get_wintitle_stat_dict_in_month(dt_in: datetime.datetime):
     return stat
 
 
-# ------------streamlit component
+# ------------streamlit component (legacy WebUI only; lazy-import streamlit)
 # 一日之时 窗口标题组件
 def component_wintitle_stat(day_date_input):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     day_wintitle_df_statename_date = day_date_input.strftime("%Y-%m-%d")
     day_wintitle_df_statename = f"wintitle_stat_{day_wintitle_df_statename_date}"
     if day_wintitle_df_statename not in st.session_state:
@@ -323,6 +324,8 @@ def component_wintitle_stat(day_date_input):
 
 # 月统计组件
 def component_month_wintitle_stat(month_dt: datetime.datetime):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     if "wintitle_month_dt_last_time" not in st.session_state:  # diff 当前显示表的日期，用于和控件用户输入对比判断是否更新
         st.session_state.wintitle_month_dt_last_time = month_dt
     if "month_wintitle_filter_lazy" not in st.session_state:

@@ -1807,8 +1807,6 @@ dependencies = [
     { name = "scikit-image", marker = "sys_platform == 'win32'" },
     { name = "send2trash", marker = "sys_platform == 'win32'" },
     { name = "shapely", marker = "sys_platform == 'win32'" },
-    { name = "streamlit", marker = "sys_platform == 'win32'" },
-    { name = "streamlit-tags", marker = "sys_platform == 'win32'" },
     { name = "tqdm", marker = "sys_platform == 'win32'" },
     { name = "uiautomation", marker = "sys_platform == 'win32'" },
     { name = "uvicorn", extra = ["standard"], marker = "sys_platform == 'win32'" },
@@ -1819,6 +1817,10 @@ dependencies = [
 img-embedding = [
     { name = "faiss-cpu", marker = "sys_platform == 'win32'" },
     { name = "uform", marker = "sys_platform == 'win32'" },
+]
+legacy-webui = [
+    { name = "streamlit", marker = "sys_platform == 'win32'" },
+    { name = "streamlit-tags", marker = "sys_platform == 'win32'" },
 ]
 paddle-ocr = [
     { name = "rapidocr-onnxruntime", marker = "sys_platform == 'win32'" },
@@ -1858,8 +1860,8 @@ requires-dist = [
     { name = "scikit-image", specifier = ">=0.22.0,<1.0.0" },
     { name = "send2trash", specifier = ">=1.8.2,<2.0.0" },
     { name = "shapely", specifier = ">=2.0.1,<2.1.0" },
-    { name = "streamlit", specifier = ">=1.29.0,<2.0.0" },
-    { name = "streamlit-tags", specifier = ">=1.2.8,<2.0.0" },
+    { name = "streamlit", marker = "extra == 'legacy-webui'", specifier = ">=1.29.0,<2.0.0" },
+    { name = "streamlit-tags", marker = "extra == 'legacy-webui'", specifier = ">=1.2.8,<2.0.0" },
     { name = "tqdm", specifier = ">=4.65.0,<5.0.0" },
     { name = "uform", marker = "extra == 'img-embedding'" },
     { name = "uiautomation", specifier = ">=2.0.20,<3.0.0" },
@@ -1867,7 +1869,7 @@ requires-dist = [
     { name = "wechat-ocr", marker = "extra == 'wechat-ocr'" },
     { name = "wordcloud", specifier = ">=1.9.2,<2.0.0" },
 ]
-provides-extras = ["paddle-ocr", "wechat-ocr", "img-embedding"]
+provides-extras = ["paddle-ocr", "wechat-ocr", "img-embedding", "legacy-webui"]
 
 [package.metadata.requires-dev]
 dev = [

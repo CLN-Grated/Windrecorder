@@ -3,7 +3,6 @@ import datetime
 import os
 
 import pandas as pd
-import streamlit as st
 from openai import OpenAI
 
 from windrecorder import file_utils, utils
@@ -18,11 +17,6 @@ from windrecorder.const import (
     LLM_TEMPERATURE_EXTRACT_DAY_TAGS,
 )
 from windrecorder.logger import get_logger
-from windrecorder.record_wintitle import (
-    get_wintitle_stat_dict_in_month,
-    get_wintitle_stat_in_day,
-    turn_wintitle_dict_into_display_dataframe,
-)
 from windrecorder.utils import get_text as _t
 
 logger = get_logger(__name__)
@@ -72,6 +66,12 @@ def remove_sensitive_exclude_words(content: str):
 
 def generate_day_or_month_tags_lst(date_in: datetime.date, type="day"):
     # get day wintitle
+    from windrecorder.record_wintitle import (
+        get_wintitle_stat_dict_in_month,
+        get_wintitle_stat_in_day,
+        turn_wintitle_dict_into_display_dataframe,
+    )
+
     dt = datetime.datetime.combine(
         date_in, datetime.time(hour=round(config.day_begin_minutes / 60), minute=config.day_begin_minutes % 60)
     )
@@ -122,6 +122,8 @@ def get_cache_data_by_date(date_in: datetime.date, cache_dir=config.ai_extract_t
 
 
 def get_day_or_month_tags(date_in: datetime.date, type="day"):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     if type == "day":
         dt_str = utils.datetime_to_dateDayStr(date_in)
     elif type == "month":
@@ -180,6 +182,8 @@ def generate_and_save_day_or_month_tags(date_in: datetime.date, type="day"):
 
 def component_day_or_month_tags(date_in: datetime.date, type="day"):
     # 渲染每日或每月标签
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     def _render_tags(tags_lst):
         html_tags_lst = []
         for tag in tags_lst:
@@ -314,6 +318,8 @@ def generate_day_poem_by_tag_lst(date_in: datetime.date, tags_lst: list):
 
 
 def get_day_poem(date_in: datetime.date, force_read=False):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     dt_str = utils.datetime_to_dateDayStr(date_in)
     if "day_poem_data" not in st.session_state or force_read:
         st.session_state["day_poem_data"] = get_cache_data_by_date(date_in, cache_dir=config.ai_day_poem_result_dir_ud)
@@ -340,6 +346,8 @@ def get_month_poem(date_in: datetime.date, force_read=False):
 
 
 def generate_month_poem(date_in: datetime.date):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     progress_text = _t("stat_text_generating_ai_poem")
     progress_bar = st.progress(0.0, text=progress_text)
 
@@ -388,6 +396,8 @@ def generate_and_save_day_poem(date_in: datetime.date):
 
 
 def component_day_poem(date_in: datetime.date):
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     day_poem_cache_exist, day_poem = get_day_poem(date_in)
     if day_poem_cache_exist:
         st.caption(day_poem)
@@ -395,6 +405,8 @@ def component_day_poem(date_in: datetime.date):
 
 def component_month_poem(month_dt: datetime.datetime):
     # 如果切换了时间或第一次加载，进行更新
+    import streamlit as st  # lazy, legacy Streamlit UI only
+
     update_condition = False
 
     if "poem_month_dt_last_time" not in st.session_state:  # diff 当前显示表的日期，用于和控件用户输入对比判断是否更新
