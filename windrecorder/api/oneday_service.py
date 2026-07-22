@@ -245,15 +245,6 @@ def get_day_timeline(day: datetime.date) -> dict[str, Any]:
         return {"date": day.isoformat(), "available": False, "image_url": None}
 
     img_path = _timeline_img_path(day)
-    # 若有当日旗标，叠加绘制到时间轴缩略图
-    try:
-        from windrecorder.api import flag_service
-
-        flagged = flag_service.maybe_flag_timeline_url(day, img_path)
-        if flagged and os.path.isfile(flagged):
-            img_path = flagged
-    except Exception:
-        logger.debug("flag timeline overlay skipped", exc_info=True)
 
     return {
         "date": day.isoformat(),

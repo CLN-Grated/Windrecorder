@@ -6,7 +6,7 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 
-from windrecorder import file_utils, flag_mark_note, record_wintitle, utils
+from windrecorder import file_utils, record_wintitle, utils
 from windrecorder.config import config
 from windrecorder.const import ST_BACKGROUNDCOLOR
 from windrecorder.db_manager import db_manager
@@ -85,13 +85,9 @@ def record_search_history(search_content, search_type, search_datetime=None):
 
 # 一日之时工具栏
 def oneday_side_toolbar():
-    lefttab_wintitle, lefttab_flagnote = st.tabs([_t("oneday_ls_title_wintitle"), _t("oneday_ls_title_flag_note")])
-    with lefttab_wintitle:
-        if config.enable_ai_extract_tag and datetime.date.today() != st.session_state.day_date_input:
-            component_day_or_month_tags(st.session_state.day_date_input)
-        record_wintitle.component_wintitle_stat(st.session_state.day_date_input)
-    with lefttab_flagnote:
-        flag_mark_note.component_flag_mark()
+    if config.enable_ai_extract_tag and datetime.date.today() != st.session_state.day_date_input:
+        component_day_or_month_tags(st.session_state.day_date_input)
+    record_wintitle.component_wintitle_stat(st.session_state.day_date_input)
 
 
 # 读取嵌入模型缓存

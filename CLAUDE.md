@@ -135,7 +135,7 @@ Do not assume a single process; state shared between tray/recorder/webui is file
 | `record_wintitle.py` | Foreground window title / deep-linking capture. |
 | `img_embed_manager.py` | Optional UForm + FAISS image/text embeddings (`db_imgemb/`). Only import when `config.img_embed_module_install`. |
 | `llm.py` | OpenAI-compatible client (`request_llm_one_shot`), day tags / day poems. |
-| `oneday.py` / `state.py` / `wordcloud.py` / `flag_mark_note.py` | Day timeline, stats/lightbox, wordcloud, flag notes. |
+| `oneday.py` / `state.py` / `wordcloud.py` | Day timeline, stats/lightbox, wordcloud. |
 | `utils.py` | i18n (`get_text` as `_t`), time/path/display helpers, ffmpeg checks. |
 | `lock.py` / `logger.py` / `file_utils.py` | Cross-process locks, logging, filesystem helpers. |
 | `ui/` | Streamlit tabs: `oneday`, `search`, `state`, `lab`, `recording`, `setting`, shared `components`. |

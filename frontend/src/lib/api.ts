@@ -75,13 +75,6 @@ export type PublicConfig = {
 
 export type FooterState = Record<string, string | number | boolean | null | undefined>
 
-export type FlagItem = {
-  index: number
-  datetime: string
-  note: string
-  thumbnail?: string
-}
-
 export type BenchmarkJob = {
   running: boolean
   kind: "record" | "compress" | null
@@ -196,19 +189,6 @@ export const api = {
   authLogout: () => postForm<{ ok: boolean }>("/api/auth/logout", new FormData()),
   publicConfig: () => getJson<PublicConfig>("/api/config/public"),
   footer: () => getJson<FooterState>("/api/footer"),
-  flagsList: (date?: string) =>
-    getJson<{ items: FlagItem[]; total: number }>(
-      date ? `/api/flags?date=${encodeURIComponent(date)}` : "/api/flags",
-    ),
-  flagsAdd: (datetime: string, note?: string) =>
-    postJson<{ ok: boolean; item?: FlagItem }>("/api/flags", {
-      datetime,
-      note,
-    }),
-  flagsUpdate: (datetime: string, note: string) =>
-    postJson<{ ok: boolean }>("/api/flags", { datetime, note }, "PATCH"),
-  flagsDelete: (datetime: string) =>
-    postJson<{ ok: boolean }>(`/api/flags?datetime=${encodeURIComponent(datetime)}`, {}, "DELETE"),
   defaultDate: () => getJson<{ date: string }>("/api/oneday/default-date"),
   dayMeta: (date: string) => getJson<DayMeta>(`/api/oneday/meta?date=${encodeURIComponent(date)}`),
   dayChart: (date: string) => getJson<DayChart>(`/api/oneday/chart?date=${encodeURIComponent(date)}`),

@@ -9,7 +9,6 @@ import {
   type DayChart,
   type DayMeta,
   type DaySearch,
-  type FlagItem,
   type LocateResult,
   type Timeline,
   type WintitleStat,
@@ -23,14 +22,6 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
@@ -73,29 +64,6 @@ export function OnedayPage() {
   const [keyword, setKeyword] = useState("")
   const [search, setSearch] = useState<DaySearch | null>(null)
   const [hitIndex, setHitIndex] = useState(0)
-  const [flagsOpen, setFlagsOpen] = useState(false)
-  const [flags, setFlags] = useState<FlagItem[]>([])
-  const [flagsLoading, setFlagsLoading] = useState(false)
-  const [flagNotes, setFlagNotes] = useState<Record<string, string>>({})
-  const [flagBusy, setFlagBusy] = useState(false)
-
-  const reloadFlags = useCallback(async (d: string) => {
-    if (!d) return
-    setFlagsLoading(true)
-    try {
-      const res = await api.flagsList(d)
-      setFlags(res.items || [])
-      const notes: Record<string, string> = {}
-      for (const it of res.items || []) {
-        notes[it.datetime] = it.note === "_" ? "" : it.note
-      }
-      setFlagNotes(notes)
-    } catch {
-      setFlags([])
-    } finally {
-      setFlagsLoading(false)
-    }
-  }, [])
 
   useEffect(() => {
     api
@@ -127,13 +95,12 @@ export function OnedayPage() {
       }
       setSearch(null)
       setHitIndex(0)
-      void reloadFlags(d)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setLoading(false)
     }
-  }, [reloadFlags])
+  }, [])
 
   useEffect(() => {
     if (date) void loadDay(date)
@@ -254,39 +221,6 @@ export function OnedayPage() {
               </CardDescription>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={!locate?.datetime || flagBusy}
-                onClick={async () => {
-                  if (!locate?.datetime) return
-                  setFlagBusy(true)
-                  setError(null)
-                  try {
-                    await api.flagsAdd(locate.datetime)
-                    await reloadFlags(date)
-                    // 刷新时间轴以显示旗标
-                    const tl = await api.dayTimeline(date)
-                    setTimeline(tl)
-                  } catch (e) {
-                    setError(e instanceof Error ? e.message : String(e))
-                  } finally {
-                    setFlagBusy(false)
-                  }
-                }}
-              >
-                🚩 {t("oneday_btn_add_flag_mark_from_select_time")}
-              </Button>
-              <Button
-                size="sm"
-                variant={flagsOpen ? "default" : "outline"}
-                onClick={() => {
-                  setFlagsOpen(true)
-                  void reloadFlags(date)
-                }}
-              >
-                {t("oneday_toggle_flag_mark")}
-              </Button>
               <Button size="sm" variant={searchOn ? "default" : "outline"} onClick={() => setSearchOn((v) => !v)}>
                 <Search className="size-4" />
                 {t("oneday_toggle_search")}
@@ -547,82 +481,6 @@ export function OnedayPage() {
           </CardContent>
         </Card>
       </div>
-
-      <Dialog open={flagsOpen} onOpenChange={setFlagsOpen}>
-        <DialogContent className="sm:max-w-lg" showCloseButton>
-          <DialogHeader>
-            <DialogTitle>{t("oneday_ls_title_flag_note")}</DialogTitle>
-            <DialogDescription>{t("oneday_text_flag_mark_help")}</DialogDescription>
-          </DialogHeader>
-          {flagsLoading ? (
-            <Skeleton className="h-40 w-full" />
-          ) : flags.length === 0 ? (
-            <p className="text-sm text-muted-foreground">{t("oneday_text_flag_mark_help")}</p>
-          ) : (
-            <ScrollArea className="max-h-80">
-              <ul className="space-y-3 pr-2">
-                {flags.map((f) => (
-                  <li key={f.datetime} className="rounded-lg border p-2 text-sm">
-                    <div className="mb-1 font-mono text-xs text-muted-foreground">{f.datetime}</div>
-                    <Input
-                      value={flagNotes[f.datetime] ?? ""}
-                      placeholder="note"
-                      onChange={(e) =>
-                        setFlagNotes((prev) => ({ ...prev, [f.datetime]: e.target.value }))
-                      }
-                    />
-                    <div className="mt-2 flex justify-end gap-2">
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        disabled={flagBusy}
-                        onClick={async () => {
-                          setFlagBusy(true)
-                          try {
-                            await api.flagsUpdate(f.datetime, flagNotes[f.datetime] ?? "")
-                            await reloadFlags(date)
-                          } catch (e) {
-                            setError(e instanceof Error ? e.message : String(e))
-                          } finally {
-                            setFlagBusy(false)
-                          }
-                        }}
-                      >
-                        {t("oneday_btn_flag_mark_save_df")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        disabled={flagBusy}
-                        onClick={async () => {
-                          setFlagBusy(true)
-                          try {
-                            await api.flagsDelete(f.datetime)
-                            await reloadFlags(date)
-                            const tl = await api.dayTimeline(date)
-                            setTimeline(tl)
-                          } catch (e) {
-                            setError(e instanceof Error ? e.message : String(e))
-                          } finally {
-                            setFlagBusy(false)
-                          }
-                        }}
-                      >
-                        删除
-                      </Button>
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            </ScrollArea>
-          )}
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setFlagsOpen(false)}>
-              关闭
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   )
 }

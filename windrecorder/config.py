@@ -72,7 +72,6 @@ class Config:
         win_title_dir,
         start_recording_on_startup,
         userdata_dir,
-        flag_mark_note_filename,
         search_history_note_filename,
         thumbnail_generation_size_width,
         thumbnail_generation_jpg_quality,
@@ -179,8 +178,6 @@ class Config:
         self.win_title_dir = win_title_dir
         self.start_recording_on_startup = start_recording_on_startup
         self.lock_file_dir = lock_file_dir
-        self.flag_mark_note_filename = flag_mark_note_filename
-        self.flag_mark_note_filepath = os.path.join(self.userdata_dir, self.flag_mark_note_filename)
         self.search_history_note_filename = search_history_note_filename
         self.search_history_note_filepath = os.path.join(self.userdata_dir, self.search_history_note_filename)
         self.thumbnail_generation_size_width = thumbnail_generation_size_width

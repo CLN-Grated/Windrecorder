@@ -4,7 +4,7 @@ import os
 import pandas as pd
 import streamlit as st
 
-from windrecorder import file_utils, flag_mark_note, utils
+from windrecorder import file_utils, utils
 from windrecorder.config import config
 from windrecorder.const import (
     SCREENSHOT_CACHE_FILEPATH,
@@ -301,19 +301,7 @@ def render():
 
         # 展示时间轴缩略图
         if get_generate_result:
-            # 添加时间标记
-            flag_mark_timeline_img_filepath = None
-            if os.path.exists(config.flag_mark_note_filepath):  # 读取标记数据
-                df_flag_mark_for_timeline = file_utils.read_dataframe_from_path(config.flag_mark_note_filepath)
-                if len(df_flag_mark_for_timeline) > 0:  # 绘制旗标图
-                    flag_mark_timeline_img_filepath = flag_mark_note.add_visual_mark_on_oneday_timeline_thumbnail(
-                        df=df_flag_mark_for_timeline, image_filepath=current_day_TL_img_path
-                    )
-
-            if flag_mark_timeline_img_filepath:
-                daily_timeline_html(utils.image_to_base64(flag_mark_timeline_img_filepath))
-            else:
-                daily_timeline_html(utils.image_to_base64(current_day_TL_img_path))
+            daily_timeline_html(utils.image_to_base64(current_day_TL_img_path))
 
         else:
             st.markdown(

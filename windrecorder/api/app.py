@@ -15,7 +15,6 @@ from windrecorder import __version__
 from windrecorder.api import (
     auth,
     config_service,
-    flag_service,
     oneday_service,
     recording_service,
     search_service,
@@ -105,41 +104,6 @@ def create_app() -> FastAPI:
     @app.get("/api/footer")
     def api_footer():
         return config_service.get_footer_state()
-
-    # ----- Flag marks -----
-    @app.get("/api/flags")
-    def flags_list(date: str | None = Query(None, description="YYYY-MM-DD filter")):
-        return flag_service.list_flags(date=date)
-
-    @app.post("/api/flags")
-    def flags_add(payload: dict):
-        dt = payload.get("datetime")
-        if not dt:
-            raise HTTPException(status_code=400, detail="datetime required")
-        note = payload.get("note")
-        try:
-            return flag_service.add_flag_at_datetime(str(dt), note=None if note is None else str(note))
-        except Exception as e:
-            logger.exception("add flag failed")
-            raise HTTPException(status_code=500, detail=str(e)) from e
-
-    @app.patch("/api/flags")
-    def flags_update(payload: dict):
-        dt = payload.get("datetime")
-        if not dt:
-            raise HTTPException(status_code=400, detail="datetime required")
-        note = payload.get("note", "_")
-        try:
-            return flag_service.update_flag_note(str(dt), str(note))
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
-
-    @app.delete("/api/flags")
-    def flags_delete(datetime: str = Query(..., description="flag datetime string")):
-        try:
-            return flag_service.delete_flag(datetime)
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=str(e)) from e
 
     @app.get("/api/oneday/default-date")
     def oneday_default_date():

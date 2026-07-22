@@ -118,7 +118,6 @@ def _collect_scope_targets(scope: str) -> list[str]:
     # never touch config
     protected = {
         os.path.abspath(os.path.join(config.userdata_dir, "config_user.json")),
-        os.path.abspath(getattr(config, "flag_mark_note_filepath", "") or ""),
     }
     out = []
     seen = set()
