@@ -218,6 +218,14 @@ def create_app() -> FastAPI:
         return state_service.generate_wordcloud(year, month)
 
     # ----- Recording / Setting -----
+    @app.get("/api/recording/status")
+    def recording_status():
+        return recording_service.get_recording_status()
+
+    @app.post("/api/recording/stop")
+    def recording_stop():
+        return recording_service.request_recording_stop()
+
     @app.get("/api/recording/options")
     def recording_options():
         return recording_service.get_options()

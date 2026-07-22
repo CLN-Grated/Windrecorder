@@ -144,7 +144,10 @@ def _scope_path_hint(scope: str) -> str:
 
 
 def get_clear_data_preview() -> dict[str, Any]:
-    is_rec = bool(record.is_recording()) if hasattr(record, "is_recording") else False
+    from windrecorder.recording_lifecycle import get_public_status
+
+    rec_status = get_public_status()
+    is_rec = bool(rec_status.get("is_recording"))
     scopes: dict[str, Any] = {}
     total_files = 0
     total_bytes = 0
@@ -172,6 +175,9 @@ def get_clear_data_preview() -> dict[str, Any]:
         # 清除本地数据一律永久删除，不进回收站、不读 recycle_deleted_files
         "permanent": True,
         "is_recording": is_rec,
+        "can_clear_data": bool(rec_status.get("can_clear_data")),
+        "recording_state": rec_status.get("state"),
+        "recording_message_key": rec_status.get("message_key"),
         "scopes": scopes,
         "total_if_all": {
             "file_count": total_files,
@@ -190,12 +196,21 @@ def clear_local_data(scopes: list[str], confirm: bool = False) -> dict[str, Any]
     if bad:
         return {"ok": False, "error": "invalid_scopes", "detail": f"unknown: {bad}"}
 
-    is_rec = bool(record.is_recording()) if hasattr(record, "is_recording") else False
-    if is_rec:
+    from windrecorder.recording_lifecycle import get_public_status
+
+    rec_status = get_public_status()
+    if not rec_status.get("can_clear_data"):
+        state = rec_status.get("state") or "recording"
+        detail = {
+            "recording": "请先停止录制后再清除数据",
+            "stopping": "正在停止录制，请稍候再清除",
+            "saving": "正在保存录制数据，请稍候再清除",
+        }.get(str(state), "请先停止录制后再清除数据")
         return {
             "ok": False,
             "error": "recording",
-            "detail": "请先停止录制后再清除数据",
+            "detail": detail,
+            "recording_state": state,
             "status_code": 409,
         }
 
@@ -234,9 +249,12 @@ def clear_local_data(scopes: list[str], confirm: bool = False) -> dict[str, Any]
 
 
 def get_db_status() -> dict[str, Any]:
+    from windrecorder.recording_lifecycle import get_public_status
+
     count, nocred_count = file_utils.get_videos_and_ocred_videos_count(config.record_videos_dir_ud)
     strategy = config.OCR_index_strategy
-    is_rec = bool(record.is_recording()) if hasattr(record, "is_recording") else False
+    rec_status = get_public_status()
+    is_rec = bool(rec_status.get("is_recording"))
     estimate = utils.estimate_indexing_time()
 
     # Align messaging levels with draw_db_status in ui/setting.py
@@ -261,6 +279,7 @@ def get_db_status() -> dict[str, Any]:
         "OCR_index_strategy": strategy,
         "estimate_indexing_time": estimate,
         "is_recording": is_rec,
+        "recording_state": rec_status.get("state"),
         "level": level,
         "message_key": msg_key,
         "manual_update_available": strategy == 0,

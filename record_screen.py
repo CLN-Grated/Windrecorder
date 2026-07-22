@@ -2,6 +2,7 @@ import datetime
 
 # https://steam.oxxostudio.tw/category/python/library/threading.html
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -17,6 +18,13 @@ from windrecorder.exceptions import LockExistsException
 from windrecorder.llm import cache_day_tags_in_idle_routine
 from windrecorder.lock import FileLock
 from windrecorder.logger import get_logger
+from windrecorder.recording_lifecycle import (
+    clear_stop_request,
+    is_stop_requested,
+    reset_stop_flags,
+    set_stop_event,
+    write_status,
+)
 
 logger = get_logger(__name__)
 
@@ -125,6 +133,10 @@ def continuously_record_screen():
     global last_idle_maintain_time
 
     while True:
+        if is_stop_requested():
+            logger.info("Windrecorder: cooperative stop requested, leaving record loop.")
+            return
+
         # 主循环过程
         if (
             monitor_idle_minutes > config.screentime_not_change_to_pause_record
@@ -148,24 +160,34 @@ def continuously_record_screen():
                 with open(config.last_idle_maintain_file_path, "w", encoding="utf-8") as f:
                     f.write(last_idle_maintain_time.strftime("%Y-%m-%d_%H-%M-%S"))
 
-            time.sleep(10)
+            # 停录等待期间也要响应协作式退出
+            for _ in range(10):
+                if is_stop_requested():
+                    logger.info("Windrecorder: cooperative stop during idle pause.")
+                    return
+                time.sleep(1)
         else:
             subprocess.run("color 2f", shell=True)  # 设定背景色为活动
             if config.record_mode == "ffmpeg":
                 video_saved_dir, video_out_name = record.record_screen_via_ffmpeg()  # 使用 ffmpeg 录制屏幕
 
-                # 自动索引策略
-                if config.OCR_index_strategy == 1:
-                    logger.info(f"Windrecorder: Starting Indexing video data: '{video_out_name}'")
-                    thread_index_video_data = threading.Thread(
-                        target=index_video_data,
-                        args=(
-                            video_saved_dir,
-                            video_out_name,
-                        ),
-                        daemon=True,
-                    )
-                    thread_index_video_data.start()
+                # 自动索引策略（停录时同步收尾，便于前端显示 saving）
+                if config.OCR_index_strategy == 1 and video_out_name:
+                    if is_stop_requested():
+                        write_status("saving", phase_message="saving", pid=getpid())
+                        logger.info(f"Windrecorder: stop-save indexing video data: '{video_out_name}'")
+                        index_video_data(video_saved_dir, video_out_name)
+                    else:
+                        logger.info(f"Windrecorder: Starting Indexing video data: '{video_out_name}'")
+                        thread_index_video_data = threading.Thread(
+                            target=index_video_data,
+                            args=(
+                                video_saved_dir,
+                                video_out_name,
+                            ),
+                            daemon=True,
+                        )
+                        thread_index_video_data.start()
             elif config.record_mode == "screenshot_array":
                 saved_dir_filepath = record.record_screen_via_screenshot_process()  # 使用连续截图录制屏幕
 
@@ -177,13 +199,22 @@ def continuously_record_screen():
                     if utils.is_power_plugged_in():
                         condition_convert_screenshots_to_vid = True
 
-                if condition_convert_screenshots_to_vid:
-                    thread_convert_screenshots_into_video = threading.Thread(
-                        target=record.convert_screenshots_dir_into_video_process,
-                        args=(saved_dir_filepath,),
-                        daemon=True,
-                    )
-                    thread_convert_screenshots_into_video.start()
+                if condition_convert_screenshots_to_vid and saved_dir_filepath:
+                    if is_stop_requested():
+                        write_status("saving", phase_message="saving", pid=getpid())
+                        logger.info("Windrecorder: stop-save converting screenshots to video")
+                        record.convert_screenshots_dir_into_video_process(saved_dir_filepath)
+                    else:
+                        thread_convert_screenshots_into_video = threading.Thread(
+                            target=record.convert_screenshots_dir_into_video_process,
+                            args=(saved_dir_filepath,),
+                            daemon=True,
+                        )
+                        thread_convert_screenshots_into_video.start()
+
+            if is_stop_requested():
+                logger.info("Windrecorder: cooperative stop after segment boundary.")
+                return
 
             time.sleep(2)
 
@@ -247,9 +278,32 @@ def record_active_window_title():
         time.sleep(2)
 
 
+def _install_stop_signal_handlers():
+    """CTRL_BREAK / SIGBREAK → 协作式退出（不直接 sys.exit）。"""
+
+    def _on_stop_signal(signum, frame):
+        logger.info(f"Windrecorder: received stop signal {signum}, requesting cooperative stop")
+        set_stop_event()
+        try:
+            write_status("stopping", phase_message="stopping", pid=getpid(), source="signal")
+        except Exception:
+            pass
+
+    for sig_name in ("SIGBREAK", "SIGINT", "SIGTERM"):
+        sig = getattr(signal, sig_name, None)
+        if sig is None:
+            continue
+        try:
+            signal.signal(sig, _on_stop_signal)
+        except (ValueError, OSError) as e:
+            logger.debug(f"cannot install handler for {sig_name}: {e}")
+
+
 def main():
     subprocess.run("color 60", shell=True)  # 设定背景色为不活动
     assert_ffmpeg()
+    _install_stop_signal_handlers()
+    reset_stop_flags()
 
     while True:
         try:
@@ -267,6 +321,7 @@ def main():
 
         with recording_lock:
             logger.info(f"Windrecorder: config.OCR_index_strategy: {config.OCR_index_strategy}")
+            write_status("recording", phase_message="recording", pid=getpid(), source="record_screen")
 
             if config.OCR_index_strategy == 1:
                 # 维护之前退出没留下的视频（如果有）
@@ -302,6 +357,19 @@ def main():
             thread_record_active_window_title.start()
 
             while True:
+                # 协作式停录：录制线程结束后不再重启，退出 with 释放锁
+                if is_stop_requested() and not thread_continuously_record_screen.is_alive():
+                    logger.info("Windrecorder: record loop ended after stop request, releasing lock.")
+                    write_status("stopped", phase_message="stopped", pid=None, source="record_screen")
+                    clear_stop_request()
+                    return
+
+                if is_stop_requested():
+                    write_status("stopping", phase_message="stopping", pid=getpid(), source="record_screen")
+                    # 等待录制线程在片段边界退出，不再重启它
+                    time.sleep(1)
+                    continue
+
                 # 如果屏幕重复画面检测线程意外出错，重启它
                 if thread_monitor_compare_screenshot is not None and not thread_monitor_compare_screenshot.is_alive():
                     thread_monitor_compare_screenshot = threading.Thread(target=monitor_compare_screenshot, daemon=True)
@@ -318,7 +386,12 @@ def main():
                         thread_record_active_window_title = threading.Thread(target=record_active_window_title, daemon=True)
                         thread_record_active_window_title.start()
 
-                time.sleep(30)
+                time.sleep(2)
+
+        # with 退出后锁已释放
+        write_status("idle", phase_message="idle", pid=None, source="record_screen")
+        clear_stop_request()
+        return
 
 
 if __name__ == "__main__":

@@ -113,16 +113,36 @@ def record_screen_via_ffmpeg(
         out_path,
     ]
 
-    # 执行命令
+    # 执行命令（支持协作式停止：收到 stop 请求时 terminate 当前 ffmpeg 段）
     try:
         logger.info(f"record_screen: ffmpeg cmd: {ffmpeg_cmd}")
-        # 运行ffmpeg
-        subprocess.run(ffmpeg_cmd, check=True)
+        from windrecorder.recording_lifecycle import is_stop_requested
+
+        proc = subprocess.Popen(ffmpeg_cmd)
+        while proc.poll() is None:
+            if is_stop_requested():
+                logger.info("record_screen: stop requested, ending current ffmpeg segment")
+                try:
+                    proc.terminate()
+                except OSError:
+                    pass
+                try:
+                    proc.wait(timeout=15)
+                except subprocess.TimeoutExpired:
+                    try:
+                        proc.kill()
+                    except OSError:
+                        pass
+                break
+            time.sleep(0.5)
         return video_saved_dir, video_out_name
     except subprocess.CalledProcessError as ex:
         logger.error(f"Windrecorder: {ex.cmd} failed with return code {ex.returncode}")
         return video_saved_dir, video_out_name
         # FIXME 报错录制失败时给用户反馈
+    except Exception as ex:
+        logger.error(f"Windrecorder: ffmpeg record unexpected error: {ex}")
+        return video_saved_dir, video_out_name
 
 
 # 检测是否正在录屏
@@ -133,8 +153,17 @@ def is_recording():
     except FileNotFoundError:
         logger.error("record: Screen recording service file lock does not exist.")
         return False
+    except (ValueError, OSError):
+        return False
 
-    return utils.is_process_running(check_pid, "python.exe")
+    alive = utils.is_process_running(check_pid, "python.exe")
+    if not alive:
+        # 陈旧锁：进程已不在，尽量清理，避免 is_recording 假阳性链路
+        try:
+            os.remove(config.record_lock_path)
+        except OSError:
+            pass
+    return alive
 
 
 # 获取视频的原始分辨率
@@ -446,7 +475,12 @@ def record_screen_via_screenshot_process():
 
     logger.info(f"start new screenshot record: {config.record_seconds=}, {config.screenshot_interval_second}")
     logger.debug(f"{config.record_seconds=}")
+    from windrecorder.recording_lifecycle import is_stop_requested
+
     while time_counter < config.record_seconds:
+        if is_stop_requested():
+            logger.info("record_screen: stop requested during screenshot segment, finishing segment")
+            break
         sleep_time_second = config.screenshot_interval_second - (time.time() - last_execute_time)
         if sleep_time_second < 1:
             sleep_time_second = 1

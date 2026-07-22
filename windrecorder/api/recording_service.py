@@ -107,6 +107,21 @@ def get_benchmark_status() -> dict[str, Any]:
 
 
 
+def get_recording_status() -> dict[str, Any]:
+    """Live recording lifecycle for WebUI (tray stop is cooperative)."""
+    from windrecorder.recording_lifecycle import get_public_status
+
+    return get_public_status()
+
+
+def request_recording_stop() -> dict[str, Any]:
+    """Same cooperative stop as tray (write stop request; no process kill)."""
+    from windrecorder.recording_lifecycle import get_public_status, request_stop
+
+    request_stop(source="api")
+    return {"ok": True, **get_public_status()}
+
+
 def get_options() -> dict[str, Any]:
     try:
         display_count = utils.get_display_count()
