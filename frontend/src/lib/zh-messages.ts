@@ -208,7 +208,9 @@ export const ZH_MESSAGES: Record<string, string> = {
   "webui_clear_confirm_hint": "请勾选要清除的范围。下方显示当前占用。",
   "webui_clear_recycle": "当前设置：删除的文件将移至回收站（可从回收站找回）。",
   "webui_clear_permanent": "将永久删除所选文件，无法轻易恢复。",
-  "webui_clear_recording": "检测到正在录制，请先停止录制后再清除。",
+  "webui_clear_recording": "检测到正在录制，请先通过系统托盘「暂停记录」停止后再清除。",
+  "webui_clear_recording_stopping": "正在停止录制并保存，请稍候…（可在托盘查看）",
+  "webui_clear_recording_saving": "正在保存录制数据，请稍候…",
   "webui_clear_selected_summary": "已选：{count} 个文件，约 {size}",
   "webui_clear_files_line": "{count} 个文件 · {size}",
   "webui_clear_ack": "我已了解此操作不可轻易恢复",
@@ -228,5 +230,10 @@ export const ZH_MESSAGES: Record<string, string> = {
   "webui_badge_video": "视频",
   "webui_badge_text": "仅文本",
   "lb_checkbox_add_watermark": "为光箱图片添加底部水印",
-  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。"
+  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。",
+  "recording_status_idle": "未录制",
+  "recording_status_recording": "录制中",
+  "recording_status_stopping": "正在停止…",
+  "recording_status_saving": "正在保存…",
+  "recording_status_stopped": "已停止"
 }

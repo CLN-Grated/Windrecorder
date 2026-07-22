@@ -44,6 +44,9 @@ type ClearScopeInfo = {
 type ClearPreview = {
   permanent: boolean
   is_recording: boolean
+  can_clear_data?: boolean
+  recording_state?: string
+  recording_message_key?: string
   scopes: Record<string, ClearScopeInfo>
   total_if_all: { file_count: number; byte_size: number; human_size: string }
 }
@@ -250,20 +253,28 @@ export default function SettingPage() {
     }
   }
 
-  // 清除对话框打开且正在录制时轮询 preview：停录后自动放行，无需重开 dialog
+  // 清除对话框只要打开就轮询：打开时 idle 后用户再开录，也能更新门禁
   useEffect(() => {
-    if (!clearOpen || !clearPreview?.is_recording) return
-    const id = window.setInterval(() => {
+    if (!clearOpen) return
+    const poll = () => {
       api
         .settingClearDataPreview()
         .then((preview) => {
           setClearPreview(preview)
-          if (preview.is_recording) setClearSawRecording(true)
+          if (
+            preview.is_recording ||
+            preview.recording_state === "stopping" ||
+            preview.recording_state === "saving"
+          ) {
+            setClearSawRecording(true)
+          }
         })
         .catch(() => {})
-    }, 500)
+    }
+    poll()
+    const id = window.setInterval(poll, 1000)
     return () => window.clearInterval(id)
-  }, [clearOpen, clearPreview?.is_recording])
+  }, [clearOpen])
 
   const selectedScopeIds = useMemo(
     () => CLEAR_SCOPE_ORDER.filter((id) => selectedScopes[id]),
@@ -839,15 +850,46 @@ export default function SettingPage() {
                 <p className="text-sm text-muted-foreground">{t("webui_clear_loading")}</p>
               ) : (
                 <div className="space-y-3">
-                  {clearPreview.is_recording ? (
-                    <Alert variant="destructive">
-                      <AlertTitle>{t("webui_clear_recording")}</AlertTitle>
-                    </Alert>
-                  ) : clearSawRecording ? (
-                    <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
-                      <AlertTitle>{t("webui_clear_recording_stopped")}</AlertTitle>
-                    </Alert>
-                  ) : null}
+                  {(() => {
+                    const state = clearPreview.recording_state
+                    const busy =
+                      clearPreview.can_clear_data === false ||
+                      clearPreview.is_recording ||
+                      state === "recording" ||
+                      state === "stopping" ||
+                      state === "saving"
+                    if (state === "stopping") {
+                      return (
+                        <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                          <AlertTitle>{t("webui_clear_recording_stopping")}</AlertTitle>
+                        </Alert>
+                      )
+                    }
+                    if (state === "saving") {
+                      return (
+                        <Alert className="border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100">
+                          <AlertTitle>{t("webui_clear_recording_saving")}</AlertTitle>
+                        </Alert>
+                      )
+                    }
+                    // 正在录制 / 不可清除：优先红色，绝不能被「曾停录」绿色 tip 盖住
+                    if (busy) {
+                      return (
+                        <Alert variant="destructive">
+                          <AlertTitle>{t("webui_clear_recording")}</AlertTitle>
+                        </Alert>
+                      )
+                    }
+                    // 仅在「当前已可清除」且本轮 dialog 曾见过录制时显示绿色
+                    if (clearSawRecording) {
+                      return (
+                        <Alert className="border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
+                          <AlertTitle>{t("webui_clear_recording_stopped")}</AlertTitle>
+                        </Alert>
+                      )
+                    }
+                    return null
+                  })()}
                   <Alert variant="destructive">
                     <AlertDescription>{t("webui_clear_permanent")}</AlertDescription>
                   </Alert>
@@ -855,7 +897,9 @@ export default function SettingPage() {
                     {CLEAR_SCOPE_ORDER.map((id) => {
                       const s = clearPreview.scopes[id]
                       if (!s) return null
-                      const disabled = clearPreview.is_recording || s.file_count === 0
+                      const disabled =
+                        (clearPreview.can_clear_data === false || clearPreview.is_recording) ||
+                        s.file_count === 0
                       return (
                         <li key={id}>
                           <label
@@ -915,6 +959,7 @@ export default function SettingPage() {
                     clearLoading ||
                     !clearPreview ||
                     clearPreview.is_recording ||
+                    clearPreview.can_clear_data === false ||
                     selectedScopeIds.length === 0
                   }
                   onClick={() => {

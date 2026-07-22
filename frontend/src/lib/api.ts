@@ -86,6 +86,19 @@ export type BenchmarkJob = {
   result: Record<string, unknown>[] | null
 }
 
+export type RecordingStatus = {
+  state: "idle" | "recording" | "stopping" | "saving" | "stopped" | string
+  phase_message?: string
+  is_recording: boolean
+  is_busy: boolean
+  can_clear_data: boolean
+  message_key?: string
+  pid?: number | null
+  updated_at?: string | null
+  source?: string | null
+  stop_requested?: boolean
+}
+
 export type SearchBounds = {
   earliest_ts: number
   latest_ts: number
@@ -248,6 +261,9 @@ export const api = {
     form.set("month", String(month))
     return postForm<{ ok: boolean; image_url: string | null }>("/api/state/wordcloud", form)
   },
+  recordingStatus: () => getJson<RecordingStatus>("/api/recording/status"),
+  recordingStop: () =>
+    postJson<{ ok: boolean } & RecordingStatus>("/api/recording/stop", {}),
   recordingOptions: () => getJson<Record<string, unknown>>("/api/recording/options"),
   recordingSave: (payload: Record<string, unknown>) =>
     postJson<{ ok: boolean; applied: string[] }>("/api/recording/save", payload),
@@ -288,6 +304,9 @@ export const api = {
     getJson<{
       permanent: boolean
       is_recording: boolean
+      can_clear_data?: boolean
+      recording_state?: string
+      recording_message_key?: string
       scopes: Record<
         string,
         {

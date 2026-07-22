@@ -356,7 +356,7 @@
   "webui_clear_loading": "正在统计占用…",
   "webui_clear_next": "下一步",
   "webui_clear_permanent": "将永久删除所选文件，无法轻易恢复。",
-  "webui_clear_recording": "检测到正在录制，请先停止录制后再清除。",
+  "webui_clear_recording": "检测到正在录制，请先通过系统托盘「暂停记录」停止后再清除。",
   "webui_clear_recycle": "当前设置：删除的文件将移至回收站（可从回收站找回）。",
   "webui_clear_scope_img_emb": "图像向量索引",
   "webui_clear_scope_ocr_db": "OCR 索引数据库",
@@ -387,5 +387,12 @@
   "webui_tip_go_settings": "前往设置",
   "webui_tip_no_password_public_desc": "当前访问地址不是 localhost / 内网地址。未设置密码时，能访问该 WebUI 的人可能看到你的数据。请在「设置」中设置密码，或仅将 API 绑定到 127.0.0.1。",
   "webui_tip_no_password_public_title": "尚未设置访问密码",
-  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。"
+  "webui_clear_recording_stopped": "录制已停止，可以继续选择清除范围。",
+  "webui_clear_recording_stopping": "正在停止录制并保存，请稍候…（可在托盘查看）",
+  "webui_clear_recording_saving": "正在保存录制数据，请稍候…",
+  "recording_status_idle": "未录制",
+  "recording_status_recording": "录制中",
+  "recording_status_stopping": "正在停止…",
+  "recording_status_saving": "正在保存…",
+  "recording_status_stopped": "已停止"
 }

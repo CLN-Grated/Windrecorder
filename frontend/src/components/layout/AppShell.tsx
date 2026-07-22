@@ -1,13 +1,27 @@
 import { useEffect, useState } from "react"
 import { NavLink, Outlet } from "react-router-dom"
 
-import { api, type FooterState } from "@/lib/api"
+import { api, type FooterState, type RecordingStatus } from "@/lib/api"
 import { useI18n } from "@/lib/i18n"
 import { cn } from "@/lib/utils"
 import { PublicAccessTip } from "@/components/layout/PublicAccessTip"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+
+function recordingBadgeClass(state: string | undefined): string {
+  switch (state) {
+    case "recording":
+      return "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/50 dark:text-red-200"
+    case "stopping":
+    case "saving":
+      return "border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-100"
+    case "stopped":
+      return "border-emerald-200 bg-emerald-50 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100"
+    default:
+      return "border-border bg-muted/60 text-muted-foreground"
+  }
+}
 
 const NAV = [
   { to: "/", key: "tab_name_oneday", end: true },
@@ -77,6 +91,45 @@ function FooterBar() {
   )
 }
 
+function RecordingStatusBadge() {
+  const { t } = useI18n()
+  const [status, setStatus] = useState<RecordingStatus | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    let id = 0
+    const load = () => {
+      api
+        .recordingStatus()
+        .then((data) => {
+          if (cancelled) return
+          setStatus(data)
+          // busy 时 1s，空闲 3s
+          window.clearInterval(id)
+          id = window.setInterval(load, data.is_busy ? 1000 : 3000)
+        })
+        .catch(() => {
+          if (!cancelled) setStatus(null)
+        })
+    }
+    load()
+    id = window.setInterval(load, 2000)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+    }
+  }, [])
+
+  if (!status) return null
+  const state = status.state || "idle"
+  const labelKey = status.message_key || `recording_status_${state}`
+  return (
+    <Badge variant="outline" className={cn("font-normal", recordingBadgeClass(state))} title={status.updated_at || undefined}>
+      {t(labelKey)}
+    </Badge>
+  )
+}
+
 export function AppShell() {
   const { t, ready, error, config } = useI18n()
 
@@ -92,6 +145,7 @@ export function AppShell() {
             <Badge variant="secondary" className="font-normal">
               WebUI Next
             </Badge>
+            <RecordingStatusBadge />
             {config?.version ? (
               <span className="hidden text-xs text-muted-foreground sm:inline">v{config.version}</span>
             ) : null}
