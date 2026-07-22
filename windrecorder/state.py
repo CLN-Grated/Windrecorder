@@ -93,6 +93,67 @@ def get_year_data_overview_scatter(dt: datetime.datetime):
     return df_year_data
 
 
+LIGHTBOX_QUALITY_STANDARD = "standard"
+LIGHTBOX_QUALITY_HD = "hd"
+LIGHTBOX_DEFAULT_WIDTH = 1774
+LIGHTBOX_HD_WIDTH = 3548  # ~2x default so HD cells keep more detail
+
+
+def _decode_thumbnail_b64(thumbnail) -> Image.Image | None:
+    if thumbnail is None:
+        return None
+    try:
+        raw = thumbnail
+        if isinstance(raw, str) and "base64," in raw:
+            raw = raw.split("base64,", 1)[1]
+        return Image.open(BytesIO(base64.b64decode(raw)))
+    except Exception:
+        logger.debug("failed to decode lightbox thumbnail", exc_info=True)
+        return None
+
+
+def _resolve_picture_path(picturefile_name: str | None) -> str | None:
+    """Resolve picturefile_name to an existing on-disk path (read-only)."""
+    if not picturefile_name:
+        return None
+    path = str(picturefile_name).strip()
+    if not path or path in ("None", "nan"):
+        return None
+    candidates = [path] if os.path.isabs(path) else [path, os.path.join(os.getcwd(), path)]
+    for candidate in candidates:
+        try:
+            if os.path.isfile(candidate):
+                return candidate
+        except OSError:
+            continue
+    return None
+
+
+def resolve_lightbox_cell_image(slot: dict | None, quality: str = LIGHTBOX_QUALITY_STANDARD) -> tuple[Image.Image | None, str]:
+    """
+    Open one lightbox cell image (read-only).
+    Returns (PIL.Image | None, source) where source is 'file' | 'thumbnail' | 'none'.
+    Caller should resize and close after paste.
+    """
+    if slot is None:
+        return None, "none"
+
+    if quality == LIGHTBOX_QUALITY_HD:
+        pic_path = _resolve_picture_path(slot.get("picturefile_name"))
+        if pic_path:
+            try:
+                img = Image.open(pic_path)
+                img.load()
+                return img, "file"
+            except Exception:
+                logger.debug(f"failed to open screenshot source {pic_path}", exc_info=True)
+
+    img = _decode_thumbnail_b64(slot.get("thumbnail"))
+    if img is not None:
+        return img, "thumbnail"
+    return None, "none"
+
+
 # 生成当月光箱（规格：1000x1000，每边30张图）
 def generate_lightbox_from_datetime_range(
     dt_month_start: datetime.datetime,
@@ -102,30 +163,49 @@ def generate_lightbox_from_datetime_range(
     img_saved_folder=config.lightbox_result_dir_ud,
     pic_width_num=25,
     pic_height_num=35,
-    lightbox_width=1774,
+    lightbox_width=None,
     enable_month_lightbox_watermark=config.enable_month_lightbox_watermark,
+    quality=LIGHTBOX_QUALITY_STANDARD,
 ):
     """
     :param image_lst_mode: 图片列表生成模式, distributeavg 在已有数据中平均分配，timeavg 按时间平均分配
+    :param quality: standard 使用 DB 缩略图；hd 优先读截图缓存原图（缺失则回退缩略图）
+    :return: dict with keys ok, quality, hd_source_hits, hd_fallback_count, lightbox_width
     """
     file_utils.ensure_dir(img_saved_folder)
+
+    if quality not in (LIGHTBOX_QUALITY_STANDARD, LIGHTBOX_QUALITY_HD):
+        quality = LIGHTBOX_QUALITY_STANDARD
+    if lightbox_width is None:
+        lightbox_width = LIGHTBOX_HD_WIDTH if quality == LIGHTBOX_QUALITY_HD else LIGHTBOX_DEFAULT_WIDTH
 
     # 光箱容纳图片容量
     all_pic_num = pic_height_num * pic_width_num
 
-    # 获取时间段所需图片列表（b64）
+    # 获取时间段所需 slot 列表（thumbnail + 可选原图路径）
     if image_lst_mode == "distributeavg":
-        image_list = db_manager.db_get_day_thumbnail_by_distributeavg(dt_month_start, dt_month_end, all_pic_num)
+        slot_list = db_manager.db_get_day_lightbox_slots_by_distributeavg(dt_month_start, dt_month_end, all_pic_num)
     elif image_lst_mode == "timeavg":
-        image_list = db_manager.db_get_day_thumbnail_by_timeavg(dt_month_start, dt_month_end, all_pic_num)
+        slot_list = db_manager.db_get_day_lightbox_slots_by_timeavg(dt_month_start, dt_month_end, all_pic_num)
+    else:
+        slot_list = None
 
-    if image_list is None:
-        return False
-    if len(image_list) < all_pic_num:
+    empty_stats = {
+        "ok": False,
+        "quality": quality,
+        "hd_source_hits": 0,
+        "hd_fallback_count": 0,
+        "lightbox_width": lightbox_width,
+    }
+    if slot_list is None:
+        return empty_stats
+    if len(slot_list) < all_pic_num:
         logger.error("Not enough images")
-        return False
+        return empty_stats
 
-    thumbnail_width, thumbnail_height = utils.calc_max_thumbnail_size(image_list)
+    # 用缩略图样本估算格子宽高比（与现网一致；不依赖全分辨率原图）
+    thumbnail_sample = [s.get("thumbnail") if s else None for s in slot_list]
+    thumbnail_width, thumbnail_height = utils.calc_max_thumbnail_size(thumbnail_sample)
 
     # 计算每张图的resize
     thumbnail_resize_width = int(lightbox_width / pic_width_num)
@@ -142,22 +222,46 @@ def generate_lightbox_from_datetime_range(
 
     blank_canvas = Image.new("RGBA", (thumbnail_resize_width, thumbnail_resize_height), background_color)
 
-    for image_data in image_list:
-        if image_data is None:
+    hd_source_hits = 0
+    hd_fallback_count = 0
+
+    for slot in slot_list:
+        image_thumbnail = None
+        opened_img = None
+        if slot is None:
             if image_lst_mode == "timeavg":
                 image_thumbnail = blank_canvas
             else:
                 continue
         else:
             try:
-                image_thumbnail = Image.open(BytesIO(base64.b64decode(image_data)))
-                image_thumbnail = image_thumbnail.resize((thumbnail_resize_width, thumbnail_resize_height))
-            except Exception:  # binascii.Error: Incorrect padding
+                opened_img, source = resolve_lightbox_cell_image(slot, quality=quality)
+                if opened_img is None:
+                    image_thumbnail = blank_canvas
+                else:
+                    if source == "file":
+                        hd_source_hits += 1
+                    elif quality == LIGHTBOX_QUALITY_HD:
+                        hd_fallback_count += 1
+                    image_thumbnail = opened_img.convert("RGBA")
+                    image_thumbnail = image_thumbnail.resize((thumbnail_resize_width, thumbnail_resize_height))
+            except Exception:  # binascii.Error: Incorrect padding / open failures
                 image_thumbnail = blank_canvas
         # 创建一个与图像大小相同的纯白色图像作为透明度掩码
         mask_cover = Image.new("L", image_thumbnail.size, 255)  # 'L' 表示灰度图像，255 表示完全不透明
 
         lightbox_img.paste(image_thumbnail, (x_offset, y_offset), mask_cover)
+        if opened_img is not None:
+            try:
+                opened_img.close()
+            except Exception:
+                pass
+            if image_thumbnail is not blank_canvas and image_thumbnail is not opened_img:
+                try:
+                    image_thumbnail.close()
+                except Exception:
+                    pass
+
         x_offset += thumbnail_resize_width + 1
         x_num += 1
         if x_num >= pic_width_num:
@@ -170,7 +274,18 @@ def generate_lightbox_from_datetime_range(
 
     img_saved_path = os.path.join(img_saved_folder, img_saved_name)
     lightbox_img.save(img_saved_path, format="PNG")
-    return True
+    stats = {
+        "ok": True,
+        "quality": quality,
+        "hd_source_hits": hd_source_hits,
+        "hd_fallback_count": hd_fallback_count,
+        "lightbox_width": lightbox_width,
+    }
+    logger.info(
+        f"{img_saved_path=} lightbox image saved. quality={quality} "
+        f"hd_source_hits={hd_source_hits} hd_fallback_count={hd_fallback_count}"
+    )
+    return stats
 
 
 def add_watermark_to_lightbox_img(input_image, dt_in: datetime.datetime, dt_out: datetime.datetime):

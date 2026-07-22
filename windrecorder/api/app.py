@@ -210,8 +210,15 @@ def create_app() -> FastAPI:
         return state_service.get_assets(year, month)
 
     @app.post("/api/state/lightbox")
-    def state_lightbox(year: int = Form(...), month: int = Form(...)):
-        return state_service.generate_lightbox(year, month)
+    def state_lightbox(
+        year: int = Form(...),
+        month: int = Form(...),
+        quality: str = Form("standard"),
+    ):
+        q = (quality or "standard").strip().lower()
+        if q not in ("standard", "hd"):
+            raise HTTPException(status_code=400, detail="quality must be 'standard' or 'hd'")
+        return state_service.generate_lightbox(year, month, quality=q)
 
     @app.post("/api/state/wordcloud")
     def state_wordcloud(year: int = Form(...), month: int = Form(...)):

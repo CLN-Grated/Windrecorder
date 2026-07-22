@@ -32,7 +32,7 @@ def generate_lightbox_data_range(
     img_saved_path, width_thumbnail_num, height_thumbnail_num, lightbox_width, image_lst_mode, is_add_watermark=True
 ):
     with st.spinner(_t("lb_text_generating")):
-        if generate_lightbox_from_datetime_range(
+        result = generate_lightbox_from_datetime_range(
             dt_month_start=st.session_state.search_date_range_in,
             dt_month_end=st.session_state.search_date_range_out,
             image_lst_mode=image_lst_mode,
@@ -42,10 +42,10 @@ def generate_lightbox_data_range(
             pic_height_num=height_thumbnail_num,
             lightbox_width=lightbox_width,
             enable_month_lightbox_watermark=is_add_watermark,
-        ):
-            return img_saved_path
-        else:
-            return None
+        )
+        # 返回 dict（含 ok）；兼容旧版 bool
+        ok = result.get("ok", False) if isinstance(result, dict) else bool(result)
+        return img_saved_path if ok else None
 
 
 def ui_custom_data_range():

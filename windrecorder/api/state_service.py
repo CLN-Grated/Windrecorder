@@ -75,19 +75,26 @@ def get_year_scatter(year: int, force: bool = False) -> dict[str, Any]:
     return {"year": year, "points": points}
 
 
-def generate_lightbox(year: int, month: int) -> dict[str, Any]:
+def generate_lightbox(year: int, month: int, quality: str = "standard") -> dict[str, Any]:
+    if quality not in (state.LIGHTBOX_QUALITY_STANDARD, state.LIGHTBOX_QUALITY_HD):
+        quality = state.LIGHTBOX_QUALITY_STANDARD
     days = calendar.monthrange(year, month)[1]
     name = f"{year}-{month}.png"
-    ok = state.generate_lightbox_from_datetime_range(
+    stats = state.generate_lightbox_from_datetime_range(
         dt_month_start=datetime.datetime(year, month, 1, 0, 0, 1),
         dt_month_end=datetime.datetime(year, month, days, 23, 59, 59),
         img_saved_name=name,
+        quality=quality,
     )
     path = os.path.join(config.lightbox_result_dir_ud, name)
+    ok = bool(stats.get("ok")) and os.path.exists(path)
     return {
-        "ok": bool(ok) and os.path.exists(path),
+        "ok": ok,
         "image_url": _media_file_url(path) if os.path.exists(path) else None,
         "path": path if os.path.exists(path) else None,
+        "quality": quality,
+        "hd_source_hits": int(stats.get("hd_source_hits", 0)) if ok else 0,
+        "hd_fallback_count": int(stats.get("hd_fallback_count", 0)) if ok else 0,
     }
 
 

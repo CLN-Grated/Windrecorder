@@ -655,8 +655,41 @@ class _DBManager:
         time_max = df["videofile_time"].max()
         return time_min, time_max
 
-    # 获取一个时间段内，按时间戳等均分的几张缩略图
-    def db_get_day_thumbnail_by_timeavg(self, dt_in: datetime.datetime, dt_out: datetime.datetime, back_pic_num):
+    @staticmethod
+    def _row_to_lightbox_slot(row) -> dict:
+        """Extract lightbox slot metadata from a df row (read-only)."""
+        thumbnail = row.get("thumbnail")
+        if thumbnail is not None and (isinstance(thumbnail, float) and math.isnan(thumbnail)):
+            thumbnail = None
+        picturefile_name = row.get("picturefile_name")
+        if picturefile_name is not None and (
+            (isinstance(picturefile_name, float) and math.isnan(picturefile_name))
+            or str(picturefile_name).strip() in ("", "None", "nan")
+        ):
+            picturefile_name = None
+        elif picturefile_name is not None:
+            picturefile_name = str(picturefile_name)
+        videofile_time = row.get("videofile_time")
+        try:
+            videofile_time = int(videofile_time) if videofile_time is not None and not (
+                isinstance(videofile_time, float) and math.isnan(videofile_time)
+            ) else None
+        except (TypeError, ValueError):
+            videofile_time = None
+        return {
+            "thumbnail": thumbnail,
+            "picturefile_name": picturefile_name,
+            "videofile_time": videofile_time,
+        }
+
+    @staticmethod
+    def _slots_to_thumbnails(slots):
+        if slots is None:
+            return None
+        return [None if s is None else s.get("thumbnail") for s in slots]
+
+    # 获取一个时间段内，按时间戳等均分的光箱 slot（thumbnail + picturefile_name）
+    def db_get_day_lightbox_slots_by_timeavg(self, dt_in: datetime.datetime, dt_out: datetime.datetime, back_pic_num):
         df, all_result_counts, _ = self.db_search_data("", dt_in, dt_out)
 
         if all_result_counts < back_pic_num:
@@ -684,38 +717,42 @@ class _DBManager:
                 closest_timestamp = 0
             closest_timestamp_result.append(closest_timestamp)
 
-        # 返回对应的缩略图数据
-        thumbnails_result = []
+        # 返回对应的 slot 元数据
+        slots_result = []
         for timestamp in closest_timestamp_result:
             if timestamp == 0:
-                thumbnails_result.append(None)
+                slots_result.append(None)
             else:
-                thumbnail = df[df["videofile_time"] == timestamp]["thumbnail"].values
-                if len(thumbnail) > 0:
-                    thumbnails_result.append(thumbnail[0])
+                matched = df[df["videofile_time"] == timestamp]
+                if len(matched) > 0:
+                    slots_result.append(self._row_to_lightbox_slot(matched.iloc[0]))
                 else:
-                    thumbnails_result.append(None)
+                    slots_result.append(None)
 
-        return thumbnails_result
+        return slots_result
 
-    # 获取一个时间段内，按数据分布等均分的几张缩略图
-    def db_get_day_thumbnail_by_distributeavg(self, date_in, date_out, pic_num):
+    # 获取一个时间段内，按数据分布等均分的光箱 slot（thumbnail + picturefile_name）
+    def db_get_day_lightbox_slots_by_distributeavg(self, date_in, date_out, pic_num):
         df, all_result_counts, _ = self.db_search_data("", date_in, date_out)
 
-        # 平均地获取结果图片，而不是平均地按时间分
-        img_list = []
-        thumbnails_result = df["thumbnail"].tolist()
         rows = len(df)
-
         if rows < pic_num:
             return None
 
         gap_num = all_result_counts // pic_num
-
+        slots_result = []
         for i in range(0, rows, gap_num):
-            img_list.append(thumbnails_result[i])
+            slots_result.append(self._row_to_lightbox_slot(df.iloc[i]))
 
-        return img_list
+        return slots_result
+
+    # 获取一个时间段内，按时间戳等均分的几张缩略图
+    def db_get_day_thumbnail_by_timeavg(self, dt_in: datetime.datetime, dt_out: datetime.datetime, back_pic_num):
+        return self._slots_to_thumbnails(self.db_get_day_lightbox_slots_by_timeavg(dt_in, dt_out, back_pic_num))
+
+    # 获取一个时间段内，按数据分布等均分的几张缩略图
+    def db_get_day_thumbnail_by_distributeavg(self, date_in, date_out, pic_num):
+        return self._slots_to_thumbnails(self.db_get_day_lightbox_slots_by_distributeavg(date_in, date_out, pic_num))
 
     # 相似的单个中文字符查找
     def find_similar_ch_characters(

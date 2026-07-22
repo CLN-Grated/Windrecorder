@@ -249,11 +249,18 @@ export const api = {
     getJson<{ lightbox_url: string | null; wordcloud_url: string | null }>(
       `/api/state/assets?year=${year}&month=${month}`,
     ),
-  generateLightbox: (year: number, month: number) => {
+  generateLightbox: (year: number, month: number, quality: "standard" | "hd" = "standard") => {
     const form = new FormData()
     form.set("year", String(year))
     form.set("month", String(month))
-    return postForm<{ ok: boolean; image_url: string | null }>("/api/state/lightbox", form)
+    form.set("quality", quality)
+    return postForm<{
+      ok: boolean
+      image_url: string | null
+      quality?: string
+      hd_source_hits?: number
+      hd_fallback_count?: number
+    }>("/api/state/lightbox", form)
   },
   generateWordcloud: (year: number, month: number) => {
     const form = new FormData()

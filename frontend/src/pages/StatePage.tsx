@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
 
@@ -58,6 +59,8 @@ export default function StatePage() {
   const [monthPoints, setMonthPoints] = useState<MonthPoint[]>([])
   const [yearPoints, setYearPoints] = useState<YearPoint[]>([])
   const [lightboxUrl, setLightboxUrl] = useState<string | null>(null)
+  const [lightboxHd, setLightboxHd] = useState(false)
+  const [lightboxHdStats, setLightboxHdStats] = useState<{ hits: number; fallback: number } | null>(null)
   const [wordcloudUrl, setWordcloudUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
@@ -76,6 +79,7 @@ export default function StatePage() {
       setYearPoints(y.points)
       setLightboxUrl(assets.lightbox_url)
       setWordcloudUrl(assets.wordcloud_url)
+      setLightboxHdStats(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -89,9 +93,21 @@ export default function StatePage() {
 
   const genLightbox = async () => {
     setBusy("lightbox")
+    setError(null)
     try {
-      const r = await api.generateLightbox(year, month)
-      setLightboxUrl(r.image_url)
+      const quality = lightboxHd ? "hd" : "standard"
+      const r = await api.generateLightbox(year, month, quality)
+      // bust browser cache after overwrite of same filename
+      const url = r.image_url
+      setLightboxUrl(url ? `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}` : null)
+      if (quality === "hd" && r.ok) {
+        setLightboxHdStats({
+          hits: r.hd_source_hits ?? 0,
+          fallback: r.hd_fallback_count ?? 0,
+        })
+      } else {
+        setLightboxHdStats(null)
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -182,10 +198,33 @@ export default function StatePage() {
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2">
           <div className="space-y-2">
-            <Button onClick={() => void genLightbox()} disabled={busy === "lightbox"}>
-              <ImageIcon className="size-4" />
-              {busy === "lightbox" ? t("stat_text_generating_lightbox") : t("stat_btn_generate_lightbox")}
-            </Button>
+            <div className="flex flex-wrap items-center gap-3">
+              <Button onClick={() => void genLightbox()} disabled={busy === "lightbox"}>
+                <ImageIcon className="size-4" />
+                {busy === "lightbox"
+                  ? lightboxHd
+                    ? t("stat_text_generating_lightbox_hd")
+                    : t("stat_text_generating_lightbox")
+                  : t("stat_btn_generate_lightbox")}
+              </Button>
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={lightboxHd}
+                  onCheckedChange={(checked) => setLightboxHd(checked === true)}
+                  disabled={busy === "lightbox"}
+                />
+                {t("stat_checkbox_lightbox_hd")}
+              </label>
+            </div>
+            <p className="text-xs text-muted-foreground">{t("stat_text_lightbox_hd_help")}</p>
+            {lightboxHdStats ? (
+              <p className="text-xs text-muted-foreground">
+                {t("stat_text_lightbox_hd_result", {
+                  hits: lightboxHdStats.hits,
+                  fallback: lightboxHdStats.fallback,
+                })}
+              </p>
+            ) : null}
             {lightboxUrl ? (
               <img src={lightboxUrl} alt="lightbox" className="w-full rounded-lg border object-contain" />
             ) : (
