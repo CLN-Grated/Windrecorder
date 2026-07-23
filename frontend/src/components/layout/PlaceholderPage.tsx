@@ -23,7 +23,7 @@ export function PlaceholderPage({
           </CardDescription>
         </CardHeader>
         <CardContent className="text-sm text-muted-foreground">
-          此页面路由已就绪，业务功能将在后续批次迁移。Streamlit 旧界面仍可在托盘中启动。
+          此页面路由已就绪，业务功能将在后续批次迁移。
         </CardContent>
       </Card>
     </div>

@@ -83,6 +83,8 @@
   "win_title_dir": "cache\\win_title",
   "webui_access_password_md5": "",
   "webui_access_password_hash": "",
+  "webui_port": 54100,
+  "webui_auto_open_browser": true,
   "enable_img_embed_search": true,
   "img_embed_search_recall_result_per_db": 30,
   "img_embed_module_install": false,
@@ -134,6 +136,5 @@
   "custom_background_opacity": 0.9,
   "convert_screenshots_to_vid_energy_saving_mode": 0,
   "enable_ocr_str_highlight_indicator": true,
-  "recycle_deleted_files": true,
-  "webui_backend": "fastapi"
+  "recycle_deleted_files": true
 }

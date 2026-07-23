@@ -9,7 +9,6 @@ class HealthResponse(BaseModel):
     ok: bool = True
     version: str
     lang: str
-    webui_backend: str = "fastapi"
 
 
 class DayMetaResponse(BaseModel):

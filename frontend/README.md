@@ -4,8 +4,7 @@ Vite + React + TypeScript + Tailwind CSS v4 + **shadcn/ui** (`--preset b27GcrRo`
 
 Package manager: **pnpm** (do not use npm / yarn).
 
-Full dual-track migration in progress: **Oneday / Search / State / Recording / Setting / Lab** routes are live.
-Streamlit remains available from the tray as Legacy.
+FastAPI WebUI 已覆盖 **Oneday / Search / State / Recording / Setting / Lab** 路由；托盘仅启动这一套 WebUI。
 
 ## Develop
 
@@ -30,14 +29,11 @@ pnpm run build
 
 Artifacts go to `frontend/dist/`. `api_server.py` / `windrecorder.api.app` serves that directory when present.
 
-## Tray dual-track
+## Tray WebUI
 
-`main.py` can start either:
+`main.py` 仅启动 FastAPI WebUI（`python api_server.py` + `frontend/dist`）。默认端口为 `54100`，可在 WebUI「设置」中修改；同处可设置启动完成后是否自动打开默认浏览器。
 
-- **New WebUI**: `python api_server.py` (FastAPI + static dist)
-- **Legacy Streamlit**: `streamlit run webui.py`
-
-Default preference: `config.webui_backend = "fastapi"` (`userdata/config_user.json` after merge from `config_default.json`).
+开发或排障时可通过 `python api_server.py --port <端口>` 临时覆盖配置端口，不会写回用户配置。
 
 ## shadcn
 

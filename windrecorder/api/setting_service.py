@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from windrecorder import __version__, file_utils, record, utils
-from windrecorder.config import config
+from windrecorder.config import config, validate_webui_auto_open_browser, validate_webui_port
 from windrecorder.const import OCR_SUPPORT_CONFIG, SCREENSHOT_CACHE_FILEPATH
 from windrecorder.logger import get_logger
 
@@ -331,7 +331,8 @@ def get_options() -> dict[str, Any]:
                 (getattr(config, "webui_access_password_hash", None) or "")
                 or (getattr(config, "webui_access_password_md5", None) or "")
             ),
-            "webui_backend": getattr(config, "webui_backend", "fastapi"),
+            "webui_port": config.webui_port,
+            "webui_auto_open_browser": config.webui_auto_open_browser,
             "OCR_index_strategy": config.OCR_index_strategy,
             "multi_display_record_strategy": getattr(config, "multi_display_record_strategy", "all"),
         },
@@ -344,7 +345,19 @@ def get_options() -> dict[str, Any]:
     }
 
 
+def _validate_webui_settings(payload: dict[str, Any]) -> None:
+    if "webui_port" in payload:
+        validate_webui_port(payload["webui_port"])
+    if "webui_auto_open_browser" in payload:
+        validate_webui_auto_open_browser(payload["webui_auto_open_browser"])
+
+
 def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
+    _validate_webui_settings(payload)
+    webui_restart_required = any(
+        key in payload and payload[key] != getattr(config, key)
+        for key in ("webui_port", "webui_auto_open_browser")
+    )
     mapping = [
         "ocr_engine",
         "ocr_lang",
@@ -360,7 +373,8 @@ def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
         "wordcloud_user_stop_words",
         "enable_month_lightbox_watermark",
         "enable_ocr_str_highlight_indicator",
-        "webui_backend",
+        "webui_port",
+        "webui_auto_open_browser",
         "OCR_index_strategy",
     ]
     applied = []
@@ -381,7 +395,7 @@ def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
 
             auth_mod.set_password("" if pwd == "" else str(pwd))
             applied.append("webui_access_password_hash")
-    return {"ok": True, "applied": applied}
+    return {"ok": True, "applied": applied, "webui_restart_required": webui_restart_required}
 
 
 def get_about() -> dict[str, Any]:

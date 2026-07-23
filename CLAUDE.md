@@ -115,12 +115,9 @@ System prerequisites (not installed by uv): **FFmpeg + ffprobe on PATH**, Git. P
 uv run --locked main.py
 # Or: start_app.bat (uv run main.py)
 
-# Web UI only (legacy Streamlit)
-uv run --locked streamlit run webui.py
-
-# Web UI Next (FastAPI + frontend/dist; **must build after any frontend/src change**)
+# WebUI（FastAPI + frontend/dist；**改 frontend/src 后必须构建**）
 cd frontend && pnpm install && pnpm run build && cd ..
-uv run --locked python api_server.py
+uv run --locked python api_server.py  # 默认读取设置端口 54100
 # Dev: API on 17831 + Vite HMR (proxies /api /media)
 # uv run --locked python api_server.py --port 17831
 # cd frontend && pnpm run dev
@@ -131,7 +128,7 @@ uv run --locked record_screen.py
 
 **Frontend delivery:** `frontend/dist` is gitignored. After editing `frontend/src`, always `pnpm run build` before validating via tray/`api_server` SPA. Hard-refresh the browser if the UI looks stale.
 
-Logs land under `cache/logs/` (`webui.log`, `recording.log`, etc.).
+Logs land under `cache/logs/` (`webui_fastapi.log`, `webui_fastapi.err`, `recording.log`, etc.).
 
 ### Lint / format
 
@@ -160,12 +157,11 @@ There is **no automated unit-test suite** in this repo. Related checks that do e
 ```
 start_app.bat
     └── main.py                    # tray (pystray), single-instance via FileLock
-            ├── subprocess: python api_server.py     # new WebUI (FastAPI + frontend/dist)
-            ├── subprocess: streamlit run webui.py   # legacy search/review UI (dual-track)
+            ├── subprocess: python api_server.py     # WebUI（FastAPI + frontend/dist）
             └── subprocess: record_screen.py         # capture + idle maintain
 ```
 
-- `main.py` owns tray lifecycle, starts/stops FastAPI/Streamlit and recording processes, scrapes stdout for `Local URL:` / `Network URL:`, uses `FileLock` on `config.tray_lock_path` to prevent double-start. `config.webui_backend` (`fastapi`|`streamlit`) sets which open-URL menu item is the tray default.
+- `main.py` owns tray lifecycle, starts/stops FastAPI WebUI and recording processes, and uses `FileLock` on `config.tray_lock_path` to prevent double-start. WebUI starts on the configured `webui_port` (default `54100`); a background worker confirms `/api/health` before exposing the address or opening the browser.
 - **Pause recording** is cooperative (`recording_lifecycle` stop request + segment boundary). **Tray exit / Ctrl+C** force-kills children (`taskkill /T /F`) and clears locks.
 - `record_screen.py` holds `config.record_lock_path`, runs capture + idle-maintenance threads, restarts crashed workers, and honors cooperative stop.
 - `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()` (optional extra `legacy-webui`).
@@ -230,7 +226,7 @@ Moving the install: delete `.venv`, relocate folder (keep `userdata` + data dirs
 - Record/compress FFmpeg presets: `record_preset.json`, `video_compress_preset.json`.
 - Core Python deps do **not** require Streamlit; optional extra: `uv sync --locked --extra legacy-webui`.
 
-Key config fields agents touch often: `record_mode`, `ocr_engine`, `support_ocr_lst`, `OCR_index_strategy`, `enable_img_embed_search`, `img_embed_module_install`, `open_ai_*`, `exclude_words`, `multi_display_record_strategy`.
+Key config fields agents touch often: `record_mode`, `ocr_engine`, `support_ocr_lst`, `OCR_index_strategy`, `enable_img_embed_search`, `img_embed_module_install`, `open_ai_*`, `exclude_words`, `multi_display_record_strategy`, `webui_port`, `webui_auto_open_browser`.
 
 ### OCR engines
 

@@ -77,7 +77,8 @@ type SettingValues = {
   wordcloud_user_stop_words: string[]
   ocr_image_crop_URBL: number[]
   multi_display_record_strategy?: string
-  webui_backend: string
+  webui_port: number
+  webui_auto_open_browser: boolean
   webui_password_enabled: boolean
   OCR_index_strategy?: number
 }
@@ -103,6 +104,8 @@ export default function SettingPage() {
   )
   const [password, setPassword] = useState("")
   const [removePassword, setRemovePassword] = useState(false)
+  const [webuiPortText, setWebuiPortText] = useState("")
+  const [webuiPortError, setWebuiPortError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [updatingDb, setUpdatingDb] = useState(false)
@@ -148,7 +151,8 @@ export default function SettingPage() {
         ? raw.ocr_image_crop_URBL.map((n) => Number(n) || 0)
         : [6, 6, 6, 3],
       multi_display_record_strategy: raw.multi_display_record_strategy || "all",
-      webui_backend: raw.webui_backend || "fastapi",
+      webui_port: Number(raw.webui_port ?? 54100),
+      webui_auto_open_browser: Boolean(raw.webui_auto_open_browser),
       webui_password_enabled: Boolean(raw.webui_password_enabled),
       OCR_index_strategy: raw.OCR_index_strategy,
     }
@@ -157,6 +161,8 @@ export default function SettingPage() {
       s.ocr_image_crop_URBL.push(6, 6, 6, 3)
     }
     setSettings(s)
+    setWebuiPortText(String(s.webui_port))
+    setWebuiPortError(null)
     setWordcloudText((s.wordcloud_user_stop_words || []).join(", "))
     setOsLangs((opts.os_support_lang as string[]) || [])
     setOcrSupport((opts.ocr_support as Record<string, OcrSupportMeta>) || {})
@@ -198,11 +204,26 @@ export default function SettingPage() {
 
   const save = async () => {
     if (!settings) return
+    const portText = webuiPortText.trim()
+    if (!/^\d+$/.test(portText)) {
+      const message = t("webui_port_invalid")
+      setWebuiPortError(message)
+      setError(message)
+      return
+    }
+    const webuiPort = Number(portText)
+    if (!Number.isInteger(webuiPort) || webuiPort < 1 || webuiPort > 65535) {
+      const message = t("webui_port_invalid")
+      setWebuiPortError(message)
+      setError(message)
+      return
+    }
     setSaving(true)
     setMessage(null)
     setError(null)
+    setWebuiPortError(null)
     try {
-      const payload: Record<string, unknown> = { ...settings }
+      const payload: Record<string, unknown> = { ...settings, webui_port: webuiPort }
       // 产品固定中文，不再提交 lang
       delete payload.lang
       payload.wordcloud_user_stop_words = wordcloudText
@@ -216,7 +237,11 @@ export default function SettingPage() {
         payload.webui_access_password = password
       }
       const res = await api.settingSave(payload)
-      setMessage(`${t("utils_toast_setting_saved")} (${res.applied.join(", ")})`)
+      setMessage(
+        res.webui_restart_required
+          ? t("webui_restart_required")
+          : `${t("utils_toast_setting_saved")} (${res.applied.join(", ")})`,
+      )
       setPassword("")
       setRemovePassword(false)
       await load()
@@ -346,11 +371,6 @@ export default function SettingPage() {
     label: e,
     value: e,
   }))
-  const webuiBackendItems = [
-    { label: "fastapi", value: "fastapi" },
-    { label: "streamlit", value: "streamlit" },
-  ]
-
   return (
     <div className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-4 md:p-6">
       <PageHeader
@@ -623,27 +643,34 @@ export default function SettingPage() {
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
-            {t("webui_set_backend")}
-            <Select
-              items={webuiBackendItems}
-              value={settings.webui_backend}
-              onValueChange={(v) => {
-                if (v != null) setSettings({ ...settings, webui_backend: v })
+            {t("webui_port")}
+            <Input
+              type="number"
+              min={1}
+              max={65535}
+              step={1}
+              className="mt-1"
+              value={webuiPortText}
+              aria-invalid={Boolean(webuiPortError)}
+              onChange={(e) => {
+                setWebuiPortText(e.target.value)
+                setWebuiPortError(null)
               }}
-            >
-              <SelectTrigger className="mt-1 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {webuiBackendItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            />
+            <span className="mt-1 block text-xs text-muted-foreground">{t("webui_port_help")}</span>
+            {webuiPortError ? <span className="mt-1 block text-xs text-destructive">{webuiPortError}</span> : null}
+          </label>
+          <label className="flex items-start gap-2 text-sm pt-6">
+            <Checkbox
+              checked={settings.webui_auto_open_browser}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, webui_auto_open_browser: checked === true })
+              }
+            />
+            <span>
+              {t("webui_auto_open_browser")}
+              <span className="mt-1 block text-xs text-muted-foreground">{t("webui_restart_hint")}</span>
+            </span>
           </label>
           <label className="text-sm">
             {t("set_input_max_num_search_page")}

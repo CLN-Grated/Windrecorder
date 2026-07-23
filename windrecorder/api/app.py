@@ -71,7 +71,6 @@ def create_app() -> FastAPI:
             ok=True,
             version=__version__,
             lang="sc",
-            webui_backend=getattr(config, "webui_backend", "fastapi"),
         )
 
     # ----- Auth -----
@@ -256,7 +255,10 @@ def create_app() -> FastAPI:
 
     @app.post("/api/setting/save")
     def setting_save(payload: dict):
-        return setting_service.save_settings(payload)
+        try:
+            return setting_service.save_settings(payload)
+        except ValueError as e:
+            raise HTTPException(status_code=422, detail=str(e)) from e
 
     @app.get("/api/setting/db-status")
     def setting_db_status():

@@ -62,7 +62,6 @@ export type WintitleStat = {
 export type PublicConfig = {
   version: string
   lang: string
-  webui_backend: string
   record_mode: string
   day_begin_minutes: number
   max_page_result: number
@@ -283,7 +282,7 @@ export const api = {
     getJson<BenchmarkJob>("/api/recording/benchmark/status"),
   settingOptions: () => getJson<Record<string, unknown>>("/api/setting/options"),
   settingSave: (payload: Record<string, unknown>) =>
-    postJson<{ ok: boolean; applied: string[] }>("/api/setting/save", payload),
+    postJson<{ ok: boolean; applied: string[]; webui_restart_required?: boolean }>("/api/setting/save", payload),
   settingDbStatus: () => getJson<DbStatus>("/api/setting/db-status"),
   settingUpdateDb: (shutdown_after = false) => {
     const form = new FormData()

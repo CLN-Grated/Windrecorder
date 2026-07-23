@@ -20,6 +20,22 @@ FILEPATH_CONFIG_USER = os.path.join(DIR_USERDATA, CONFIG_NAME_USER)
 FILEPATH_CONFIG_VIDEO_COMPRESS_PRESET = os.path.join(DIR_CONFIG_SRC, CONFIG_NAME_VIDEO_COMPRESS_PRESET)
 FILEPATH_CONFIG_RECORD_PRESET = os.path.join(DIR_CONFIG_SRC, CONFIG_NAME_RECORD_PRESET)
 
+WEBUI_PORT_DEFAULT = 54100
+WEBUI_PORT_MIN = 1
+WEBUI_PORT_MAX = 65535
+
+
+def validate_webui_port(value) -> int:
+    if type(value) is not int or not WEBUI_PORT_MIN <= value <= WEBUI_PORT_MAX:
+        raise ValueError(f"WebUI 端口必须是 {WEBUI_PORT_MIN} 到 {WEBUI_PORT_MAX} 之间的整数。")
+    return value
+
+
+def validate_webui_auto_open_browser(value) -> bool:
+    if type(value) is not bool:
+        raise ValueError("WebUI 自动打开浏览器必须为布尔值。")
+    return value
+
 
 class Config:
     def __init__(
@@ -121,7 +137,8 @@ class Config:
         convert_screenshots_to_vid_energy_saving_mode,
         enable_ocr_str_highlight_indicator,
         recycle_deleted_files,
-        webui_backend="fastapi",
+        webui_port=WEBUI_PORT_DEFAULT,
+        webui_auto_open_browser=True,
         webui_access_password_hash="",
         compress_cpu_threads=None,
         **other_field,
@@ -233,8 +250,8 @@ class Config:
         )
         self.enable_ocr_str_highlight_indicator = enable_ocr_str_highlight_indicator
         self.recycle_deleted_files = recycle_deleted_files
-        # fastapi | streamlit — which backend the tray "start webui" prefers; both can coexist
-        self.webui_backend = webui_backend
+        self.webui_port = webui_port
+        self.webui_auto_open_browser = webui_auto_open_browser
 
     def set_and_save_config(self, attr: str, value):
         if not hasattr(self, attr):
@@ -302,6 +319,19 @@ def get_config_json():
     with open(FILEPATH_CONFIG_USER, "r", encoding="utf-8") as f:
         config_json = json.load(f)
     return config_json
+
+
+def get_webui_launch_settings() -> tuple[int, bool]:
+    """只读获取托盘下一次启动 WebUI 所需的配置快照。"""
+    try:
+        with open(FILEPATH_CONFIG_USER, "r", encoding="utf-8") as f:
+            config_json = json.load(f)
+    except (OSError, json.JSONDecodeError) as e:
+        raise ValueError(f"读取 WebUI 设置失败：{e}") from e
+
+    port = validate_webui_port(config_json.get("webui_port", WEBUI_PORT_DEFAULT))
+    auto_open_browser = validate_webui_auto_open_browser(config_json.get("webui_auto_open_browser", True))
+    return port, auto_open_browser
 
 
 def get_video_compress_preset_json():
