@@ -2,6 +2,13 @@ import { useEffect, useMemo, useState } from "react"
 import { Settings, Trash2 } from "lucide-react"
 
 import { api, type DbStatus } from "@/lib/api"
+import {
+  DEFAULT_LOCAL_API_BASE,
+  clearApiBase,
+  getApiBase,
+  probeApiHealth,
+  setApiBase,
+} from "@/lib/api-base"
 import { useI18n, useT } from "@/lib/i18n"
 import { I18nMarkdown, MarkdownBlock } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -79,6 +86,9 @@ type SettingValues = {
   multi_display_record_strategy?: string
   webui_port: number
   webui_auto_open_browser: boolean
+  webui_auth_protect_api: boolean
+  webui_auth_protect_media_images: boolean
+  webui_auth_protect_media_videos: boolean
   webui_password_enabled: boolean
   OCR_index_strategy?: number
 }
@@ -106,6 +116,9 @@ export default function SettingPage() {
   const [removePassword, setRemovePassword] = useState(false)
   const [webuiPortText, setWebuiPortText] = useState("")
   const [webuiPortError, setWebuiPortError] = useState<string | null>(null)
+  const [apiBaseText, setApiBaseText] = useState("")
+  const [apiBaseError, setApiBaseError] = useState<string | null>(null)
+  const [apiBaseProbing, setApiBaseProbing] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [updatingDb, setUpdatingDb] = useState(false)
@@ -153,6 +166,9 @@ export default function SettingPage() {
       multi_display_record_strategy: raw.multi_display_record_strategy || "all",
       webui_port: Number(raw.webui_port ?? 54100),
       webui_auto_open_browser: Boolean(raw.webui_auto_open_browser),
+      webui_auth_protect_api: raw.webui_auth_protect_api !== false,
+      webui_auth_protect_media_images: raw.webui_auth_protect_media_images !== false,
+      webui_auth_protect_media_videos: raw.webui_auth_protect_media_videos !== false,
       webui_password_enabled: Boolean(raw.webui_password_enabled),
       OCR_index_strategy: raw.OCR_index_strategy,
     }
@@ -163,6 +179,8 @@ export default function SettingPage() {
     setSettings(s)
     setWebuiPortText(String(s.webui_port))
     setWebuiPortError(null)
+    setApiBaseText(getApiBase())
+    setApiBaseError(null)
     setWordcloudText((s.wordcloud_user_stop_words || []).join(", "))
     setOsLangs((opts.os_support_lang as string[]) || [])
     setOcrSupport((opts.ocr_support as Record<string, OcrSupportMeta>) || {})
@@ -639,9 +657,74 @@ export default function SettingPage() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("webui_set_ui_search_title")}</CardTitle>
+          <CardTitle className="text-base">{t("webui_set_connection_title")}</CardTitle>
+          <CardDescription>{t("webui_set_connection_desc")}</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-2">
+          <label className="text-sm md:col-span-2">
+            {t("webui_api_base")}
+            <div className="mt-1 flex flex-wrap gap-2">
+              <Input
+                className="min-w-[16rem] flex-1"
+                value={apiBaseText}
+                placeholder={DEFAULT_LOCAL_API_BASE}
+                aria-invalid={Boolean(apiBaseError)}
+                onChange={(e) => {
+                  setApiBaseText(e.target.value)
+                  setApiBaseError(null)
+                }}
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                disabled={apiBaseProbing}
+                onClick={() => {
+                  void (async () => {
+                    setApiBaseProbing(true)
+                    setApiBaseError(null)
+                    setError(null)
+                    try {
+                      const raw = apiBaseText.trim()
+                      const ok = await probeApiHealth(raw)
+                      if (!ok) {
+                        setApiBaseError(t("webui_api_base_probe_fail"))
+                        setError(t("webui_api_base_probe_fail"))
+                        return
+                      }
+                      if (raw) setApiBase(raw)
+                      else clearApiBase()
+                      setMessage(t("webui_api_base_probe_ok"))
+                      await refresh()
+                      await load()
+                    } catch (e) {
+                      const msg = e instanceof Error ? e.message : String(e)
+                      setApiBaseError(msg)
+                      setError(msg)
+                    } finally {
+                      setApiBaseProbing(false)
+                    }
+                  })()
+                }}
+              >
+                {apiBaseProbing ? "..." : t("webui_api_base_probe")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  clearApiBase()
+                  setApiBaseText("")
+                  setApiBaseError(null)
+                  setMessage(t("webui_api_base_cleared"))
+                  void refresh()
+                }}
+              >
+                {t("webui_api_base_clear")}
+              </Button>
+            </div>
+            <span className="mt-1 block text-xs text-muted-foreground">{t("webui_api_base_help")}</span>
+            {apiBaseError ? <span className="mt-1 block text-xs text-destructive">{apiBaseError}</span> : null}
+          </label>
           <label className="text-sm">
             {t("webui_port")}
             <Input
@@ -672,6 +755,42 @@ export default function SettingPage() {
               <span className="mt-1 block text-xs text-muted-foreground">{t("webui_restart_hint")}</span>
             </span>
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={settings.webui_auth_protect_api}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, webui_auth_protect_api: checked === true })
+              }
+            />
+            {t("webui_auth_protect_api")}
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <Checkbox
+              checked={settings.webui_auth_protect_media_images}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, webui_auth_protect_media_images: checked === true })
+              }
+            />
+            {t("webui_auth_protect_media_images")}
+          </label>
+          <label className="flex items-center gap-2 text-sm md:col-span-2">
+            <Checkbox
+              checked={settings.webui_auth_protect_media_videos}
+              onCheckedChange={(checked) =>
+                setSettings({ ...settings, webui_auth_protect_media_videos: checked === true })
+              }
+            />
+            {t("webui_auth_protect_media_videos")}
+          </label>
+          <p className="text-xs text-muted-foreground md:col-span-2">{t("webui_auth_protect_help")}</p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("webui_set_ui_search_title")}</CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-3 md:grid-cols-2">
           <label className="text-sm">
             {t("set_input_max_num_search_page")}
             <Input

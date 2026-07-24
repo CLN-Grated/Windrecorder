@@ -1,3 +1,4 @@
+import argparse
 import os
 import signal
 import subprocess
@@ -42,6 +43,7 @@ recording_process: Popen | None = None  # 存储录制进程的实例，表示�
 webui_local_url = ""
 webui_starting = False
 webui_ready = False
+webui_disabled = False
 _webui_launch_id = 0
 _webui_lock = threading.Lock()
 
@@ -68,7 +70,7 @@ file_utils.empty_directory(config.maintain_lock_path)
 
 # 调用浏览器打开 WebUI
 def open_webui(icon: pystray.Icon, item: pystray.MenuItem):
-    if webui_ready and webui_local_url:
+    if not webui_disabled and webui_ready and webui_local_url:
         webbrowser.open(webui_local_url)
 
 
@@ -185,6 +187,9 @@ def _stop_webui(proc: Popen | None) -> None:
 # 启动/停止 FastAPI WebUI
 def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
     global webui_process, webui_local_url, webui_ready, webui_starting, _webui_launch_id
+
+    if webui_disabled:
+        return
 
     with _webui_lock:
         proc = webui_process
@@ -482,11 +487,12 @@ def menu_callback():
             ),
             start_stop_webui,
             enabled=lambda item: not webui_starting,
+            visible=lambda item: not webui_disabled,
         ),
         pystray.MenuItem(
             lambda item: _t("tray_webui_address").format(address_port=webui_local_url),
             open_webui,
-            visible=lambda item: webui_ready,
+            visible=lambda item: not webui_disabled and webui_ready,
             default=True,
         ),
         # 开始或停止录制选项（停录中禁用，避免连点；退出始终可用）
@@ -574,8 +580,12 @@ def hide_cli_window():
     print("\n   Hide CLI window fail. Please minimize this window manually.")
 
 
-def main():
-    global tray_icon
+def main(nowebui: bool = False):
+    global tray_icon, webui_disabled
+
+    webui_disabled = nowebui
+    if webui_disabled:
+        logger.info("WebUI disabled by --nowebui")
 
     # 启动时加锁，防止重复启动
     while True:
@@ -681,5 +691,18 @@ def main():
                 pass
 
 
+def parse_args(argv=None):
+    parser = argparse.ArgumentParser(description="Windrecorder system tray")
+    parser.add_argument(
+        "--nowebui",
+        action="store_true",
+        help="禁用托盘 WebUI 入口，不允许启动 WebUI 子进程",
+    )
+    # 兼容 `uv run main.py --locked --nowebui`；推荐把 --locked 放在 main.py 前交给 uv。
+    parser.add_argument("--locked", action="store_true", help=argparse.SUPPRESS)
+    return parser.parse_args(argv)
+
+
 if __name__ == "__main__":
-    main()
+    args = parse_args()
+    main(nowebui=args.nowebui)

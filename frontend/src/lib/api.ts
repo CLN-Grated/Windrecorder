@@ -1,3 +1,7 @@
+import { apiUrl, authHeaders, clearWebuiToken, setWebuiToken } from "@/lib/api-base"
+
+export { apiUrl, mediaUrl, getApiBase, setApiBase, clearApiBase, DEFAULT_LOCAL_API_BASE } from "@/lib/api-base"
+
 export type DayMeta = {
   date: string
   has_data: boolean
@@ -155,8 +159,8 @@ export type GlobalSearchResult = {
   mode?: string
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { credentials: "include" })
+async function getJson<T>(path: string): Promise<T> {
+  const res = await fetch(apiUrl(path), { headers: authHeaders() })
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`)
@@ -164,8 +168,8 @@ async function getJson<T>(url: string): Promise<T> {
   return res.json() as Promise<T>
 }
 
-async function postForm<T>(url: string, form: FormData): Promise<T> {
-  const res = await fetch(url, { method: "POST", body: form, credentials: "include" })
+async function postForm<T>(path: string, form: FormData): Promise<T> {
+  const res = await fetch(apiUrl(path), { method: "POST", body: form, headers: authHeaders() })
   if (!res.ok) {
     const text = await res.text().catch(() => "")
     throw new Error(`${res.status} ${res.statusText}${text ? `: ${text}` : ""}`)
@@ -173,11 +177,10 @@ async function postForm<T>(url: string, form: FormData): Promise<T> {
   return res.json() as Promise<T>
 }
 
-async function postJson<T>(url: string, body: unknown, method: "POST" | "PATCH" | "DELETE" = "POST"): Promise<T> {
-  const res = await fetch(url, {
+async function postJson<T>(path: string, body: unknown, method: "POST" | "PATCH" | "DELETE" = "POST"): Promise<T> {
+  const res = await fetch(apiUrl(path), {
     method,
-    credentials: "include",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders({ "Content-Type": "application/json" }),
     body: method === "DELETE" && (body == null || (typeof body === "object" && Object.keys(body as object).length === 0))
       ? undefined
       : JSON.stringify(body ?? {}),
@@ -193,12 +196,20 @@ export const api = {
   health: () => getJson<{ ok: boolean; version: string; lang: string }>("/api/health"),
   authStatus: () =>
     getJson<{ password_enabled: boolean; authenticated: boolean }>("/api/auth/status"),
-  authLogin: (password: string) => {
+  authLogin: async (password: string) => {
     const form = new FormData()
     form.set("password", password)
-    return postForm<{ ok: boolean; authenticated: boolean; token?: string }>("/api/auth/login", form)
+    const res = await postForm<{ ok: boolean; authenticated: boolean; token?: string }>("/api/auth/login", form)
+    if (res.token) setWebuiToken(res.token)
+    return res
   },
-  authLogout: () => postForm<{ ok: boolean }>("/api/auth/logout", new FormData()),
+  authLogout: async () => {
+    try {
+      return await postForm<{ ok: boolean }>("/api/auth/logout", new FormData())
+    } finally {
+      clearWebuiToken()
+    }
+  },
   publicConfig: () => getJson<PublicConfig>("/api/config/public"),
   footer: () => getJson<FooterState>("/api/footer"),
   defaultDate: () => getJson<{ date: string }>("/api/oneday/default-date"),

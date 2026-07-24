@@ -333,6 +333,9 @@ def get_options() -> dict[str, Any]:
             ),
             "webui_port": config.webui_port,
             "webui_auto_open_browser": config.webui_auto_open_browser,
+            "webui_auth_protect_api": bool(getattr(config, "webui_auth_protect_api", True)),
+            "webui_auth_protect_media_images": bool(getattr(config, "webui_auth_protect_media_images", True)),
+            "webui_auth_protect_media_videos": bool(getattr(config, "webui_auth_protect_media_videos", True)),
             "OCR_index_strategy": config.OCR_index_strategy,
             "multi_display_record_strategy": getattr(config, "multi_display_record_strategy", "all"),
         },
@@ -350,6 +353,13 @@ def _validate_webui_settings(payload: dict[str, Any]) -> None:
         validate_webui_port(payload["webui_port"])
     if "webui_auto_open_browser" in payload:
         validate_webui_auto_open_browser(payload["webui_auto_open_browser"])
+    for key in (
+        "webui_auth_protect_api",
+        "webui_auth_protect_media_images",
+        "webui_auth_protect_media_videos",
+    ):
+        if key in payload and type(payload[key]) is not bool:
+            raise ValueError(f"{key} 必须为布尔值。")
 
 
 def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
@@ -375,6 +385,9 @@ def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
         "enable_ocr_str_highlight_indicator",
         "webui_port",
         "webui_auto_open_browser",
+        "webui_auth_protect_api",
+        "webui_auth_protect_media_images",
+        "webui_auth_protect_media_videos",
         "OCR_index_strategy",
     ]
     applied = []

@@ -56,10 +56,11 @@ class WebUIAuthMiddleware(BaseHTTPMiddleware):
 def create_app() -> FastAPI:
     app = FastAPI(title="Windrecorder Web API", version=__version__)
 
+    # CORS=*；鉴权走 Authorization Bearer，不依赖 credentials
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
-        allow_credentials=True,
+        allow_credentials=False,
         allow_methods=["*"],
         allow_headers=["*"],
     )

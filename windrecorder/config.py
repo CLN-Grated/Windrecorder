@@ -139,6 +139,9 @@ class Config:
         recycle_deleted_files,
         webui_port=WEBUI_PORT_DEFAULT,
         webui_auto_open_browser=True,
+        webui_auth_protect_api=True,
+        webui_auth_protect_media_images=True,
+        webui_auth_protect_media_videos=True,
         webui_access_password_hash="",
         compress_cpu_threads=None,
         **other_field,
@@ -252,6 +255,9 @@ class Config:
         self.recycle_deleted_files = recycle_deleted_files
         self.webui_port = webui_port
         self.webui_auto_open_browser = webui_auto_open_browser
+        self.webui_auth_protect_api = webui_auth_protect_api
+        self.webui_auth_protect_media_images = webui_auth_protect_media_images
+        self.webui_auth_protect_media_videos = webui_auth_protect_media_videos
 
     def set_and_save_config(self, attr: str, value):
         if not hasattr(self, attr):

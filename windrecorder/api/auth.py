@@ -150,7 +150,18 @@ def is_public_path(path: str) -> bool:
         return True
     if path in ("/", "/favicon.svg", "/icons.svg", "/index.html"):
         return True
-    # SPA client routes — index shell only; APIs stay protected
+
+    # Media: optional unprotect via settings (default all protected)
+    if path.startswith("/media/video/"):
+        return not bool(getattr(config, "webui_auth_protect_media_videos", True))
+    if path.startswith("/media/"):
+        return not bool(getattr(config, "webui_auth_protect_media_images", True))
+
+    # API (except public paths above)
+    if path.startswith("/api"):
+        return not bool(getattr(config, "webui_auth_protect_api", True))
+
+    # SPA client routes — index shell only
     if not path.startswith("/api") and not path.startswith("/media"):
         return True
     return False

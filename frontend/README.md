@@ -35,6 +35,18 @@ Artifacts go to `frontend/dist/`. `api_server.py` / `windrecorder.api.app` serve
 
 开发或排障时可通过 `python api_server.py --port <端口>` 临时覆盖配置端口，不会写回用户配置。
 
+## 前后端分离
+
+前端可单独部署到静态托管 / Serverless：
+
+1. `pnpm run build`，将 `frontend/dist` 部署到任意静态站点。
+2. 本机或服务器运行 `uv run --locked python api_server.py`（默认 `127.0.0.1:54100`）。
+3. 打开静态站点 →「设置 → 连接 / API」填写 API 地址（如 `http://127.0.0.1:54100`）→「检测并应用」。
+4. 地址保存在浏览器 `localStorage`（`wr_api_base`）；登录 token 为 `wr_webui_token`，请求统一带 `Authorization: Bearer`。
+5. 后端 CORS 为 `*`；鉴权不依赖 Cookie credentials。
+
+本地一体化（托盘 / `api_server` 托管 dist）时可不填 API 地址，默认相对路径。
+
 ## shadcn
 
 ```bash

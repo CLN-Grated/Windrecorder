@@ -9,6 +9,7 @@ import {
 } from "react"
 
 import { api, type PublicConfig } from "@/lib/api"
+import { ensureLocalApiBaseHint } from "@/lib/api-base"
 import { ZH_MESSAGES } from "@/lib/zh-messages"
 
 type Messages = Record<string, string>
@@ -64,6 +65,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       try {
+        await ensureLocalApiBaseHint()
         const pub = await api.publicConfig()
         setConfig(pub)
       } catch {

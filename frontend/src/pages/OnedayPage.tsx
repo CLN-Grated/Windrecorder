@@ -16,6 +16,7 @@ import {
 import { useI18n, useT } from "@/lib/i18n"
 import { highlightOcrText } from "@/lib/ocr-highlight"
 import { cn } from "@/lib/utils"
+import { AuthMediaImg, AuthMediaVideo } from "@/components/AuthMedia"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -273,7 +274,7 @@ export function OnedayPage() {
           ) : (
             <>
               {timeline?.available && timeline.image_url ? (
-                <img
+                <AuthMediaImg
                   src={timeline.image_url}
                   alt="day timeline"
                   className="max-h-28 w-full rounded-md object-cover object-left"
@@ -392,20 +393,16 @@ export function OnedayPage() {
             {locateLoading && !locate ? <Skeleton className="aspect-video w-full" /> : null}
 
             {locate?.kind === "video" && locate.video_url ? (
-              <video
-                key={`${locate.video_url}-${locate.start_seconds ?? 0}`}
+              <AuthMediaVideo
+                src={locate.video_url}
+                startSeconds={locate.start_seconds ?? 0}
                 className="aspect-video w-full rounded-lg bg-black object-contain"
-                src={`${locate.video_url}#t=${Math.max(0, locate.start_seconds ?? 0)}`}
-                controls
-                controlsList="nodownload"
-                preload="metadata"
-                playsInline
                 autoPlay
               />
             ) : null}
 
             {locate?.kind === "screenshot" && locate.screenshot_url ? (
-              <img
+              <AuthMediaImg
                 src={locate.screenshot_url}
                 alt="screenshot recall"
                 className="mx-auto max-h-[70vh] w-full rounded-lg object-contain"

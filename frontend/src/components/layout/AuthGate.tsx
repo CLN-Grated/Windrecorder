@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from "react"
 
 import { api } from "@/lib/api"
+import { clearWebuiToken, getWebuiToken } from "@/lib/api-base"
 import { useT } from "@/lib/i18n"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Button } from "@/components/ui/button"
@@ -19,6 +20,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     try {
       const s = await api.authStatus()
+      // Bearer is the source of truth for split deploy; drop stale tokens on 401-style mismatch.
+      if (s.password_enabled && !s.authenticated && getWebuiToken()) {
+        clearWebuiToken()
+      }
       setNeedsLogin(Boolean(s.password_enabled && !s.authenticated))
       setError(null)
     } catch (e) {
