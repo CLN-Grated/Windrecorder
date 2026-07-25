@@ -1,0 +1,10 @@
+name = "windrecorder-webui"
+compatibility_date = "2026-07-25"
+
+[assets]
+directory = "./frontend/dist"
+# SPA 路由回退：前端路由的 404 都回退到 index.html
+not_found_handling = "single-page-application"
+
+[build]
+command = "cd frontend && pnpm run build"
