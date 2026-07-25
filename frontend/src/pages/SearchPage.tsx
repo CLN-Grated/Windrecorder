@@ -12,7 +12,6 @@ import {
 import { useI18n, useT } from "@/lib/i18n"
 import { highlightOcrText } from "@/lib/ocr-highlight"
 import { cn } from "@/lib/utils"
-import { AuthMediaVideo } from "@/components/AuthMedia"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -301,10 +300,14 @@ export default function SearchPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {hit?.video_url ? (
-              <AuthMediaVideo
-                src={hit.video_url}
-                startSeconds={hit.start_seconds ?? 0}
+              <video
+                key={`${hit.video_url}-${hit.start_seconds ?? 0}`}
                 className="aspect-video w-full rounded-lg bg-black object-contain"
+                src={`${hit.video_url}#t=${Math.max(0, hit.start_seconds ?? 0)}`}
+                controls
+                controlsList="nodownload"
+                preload="metadata"
+                playsInline
                 autoPlay
               />
             ) : hit ? (

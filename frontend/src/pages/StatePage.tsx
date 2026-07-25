@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { BarChart3, ImageIcon, RefreshCw } from "lucide-react"
 
-import { AuthMediaImg } from "@/components/AuthMedia"
-import { api, mediaUrl } from "@/lib/api"
+import { api } from "@/lib/api"
 import { useT } from "@/lib/i18n"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
 import { PageHeader } from "@/components/layout/PageHeader"
@@ -78,8 +77,8 @@ export default function StatePage() {
       ])
       setMonthPoints(m.points)
       setYearPoints(y.points)
-      setLightboxUrl(assets.lightbox_url ? mediaUrl(assets.lightbox_url) : null)
-      setWordcloudUrl(assets.wordcloud_url ? mediaUrl(assets.wordcloud_url) : null)
+      setLightboxUrl(assets.lightbox_url)
+      setWordcloudUrl(assets.wordcloud_url)
       setLightboxHdStats(null)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
@@ -99,7 +98,7 @@ export default function StatePage() {
       const quality = lightboxHd ? "hd" : "standard"
       const r = await api.generateLightbox(year, month, quality)
       // bust browser cache after overwrite of same filename
-      const url = r.image_url ? mediaUrl(r.image_url) : null
+      const url = r.image_url
       setLightboxUrl(url ? `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}` : null)
       if (quality === "hd" && r.ok) {
         setLightboxHdStats({
@@ -120,7 +119,7 @@ export default function StatePage() {
     setBusy("wordcloud")
     try {
       const r = await api.generateWordcloud(year, month)
-      setWordcloudUrl(r.image_url ? mediaUrl(r.image_url) : null)
+      setWordcloudUrl(r.image_url)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -227,7 +226,7 @@ export default function StatePage() {
               </p>
             ) : null}
             {lightboxUrl ? (
-              <AuthMediaImg src={lightboxUrl} alt="lightbox" className="w-full rounded-lg border object-contain" />
+              <img src={lightboxUrl} alt="lightbox" className="w-full rounded-lg border object-contain" />
             ) : (
               <p className="text-sm text-muted-foreground">{t("stat_text_no_month_lightbox")}</p>
             )}
@@ -237,7 +236,7 @@ export default function StatePage() {
               {busy === "wordcloud" ? t("stat_text_generating_word_cloud") : t("stat_btn_generate_update_word_cloud")}
             </Button>
             {wordcloudUrl ? (
-              <AuthMediaImg src={wordcloudUrl} alt="wordcloud" className="w-full rounded-lg border object-contain" />
+              <img src={wordcloudUrl} alt="wordcloud" className="w-full rounded-lg border object-contain" />
             ) : (
               <p className="text-sm text-muted-foreground">{t("stat_text_no_month_word_cloud_pic")}</p>
             )}

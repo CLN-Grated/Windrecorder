@@ -169,7 +169,6 @@ start_app.bat
 - `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()` (optional extra `legacy-webui`).
 - `api_server.py` / `windrecorder/api/` is the FastAPI layer reusing `oneday`, `db_manager`, etc.; SPA static files from `frontend/dist`.
 - `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui. Copy for new WebUI often lives in `frontend/src/lib/zh-messages.ts`.
-- 前后端可分离：前端 `localStorage` 存 API 基址（`wr_api_base`）与 Bearer token（`wr_webui_token`）；同源默认相对路径。CORS `*`；鉴权以 `Authorization: Bearer` 为准。
 
 Do not assume a single process; state shared between tray/recorder/webui is files + SQLite + locks under `cache/locks/` (including `recording_status.json` / `RECORD_STOP_REQUESTED`).
 
