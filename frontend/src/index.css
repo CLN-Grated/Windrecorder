@@ -1,13 +1,16 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+/* Inter variable 全子集引入：每个 @font-face 带 unicode-range，
+   浏览器只下载实际用到的子集（拉丁），其余 woff2 仅占 dist 空间不走网络 */
 @import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Inter Variable', sans-serif;
+    /* Inter 拉拉丁；中文缺字时落到 misans-web-vf-font（public 分片按需加载），再系统兜底 */
+    --font-sans: 'Inter Variable', 'misans-web-vf-font', 'PingFang SC', 'Microsoft YaHei', sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
