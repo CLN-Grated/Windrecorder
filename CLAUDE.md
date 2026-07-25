@@ -34,7 +34,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | 入口 | 行为 |
 |------|------|
 | 托盘「暂停记录」 | **协作**：stop 请求 + 片段边界退出，默认不 `taskkill` |
-| 托盘「退出」/ Ctrl+C | **强制**：`taskkill /PID /T /F` + 清锁 + `os._exit` |
+| 托盘「退出」 | **优雅**：停 WebUI + 协作停录，30s 超时仅提示，录制退出后才 `os._exit` |
+| Ctrl+C / 关控制台 | **强制**：`taskkill /PID /T /F` + 清锁 + `os._exit` |
 
 状态源：`cache/locks/recording_status.json`、`RECORD_STOP_REQUESTED`（`windrecorder/recording_lifecycle.py`）。
 

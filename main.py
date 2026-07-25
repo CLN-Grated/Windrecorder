@@ -46,6 +46,8 @@ webui_ready = False
 webui_disabled = False
 _webui_launch_id = 0
 _webui_lock = threading.Lock()
+# 托盘「退出」进行中（仅 UI 禁用；后台等待标志仍用 recording_stopping）
+tray_exiting = False
 
 
 def get_tray_icon(state="recording"):
@@ -264,7 +266,7 @@ def start_stop_webui(icon: pystray.Icon, item: pystray.MenuItem):
 
 
 # 协作式停止录制：写 stop 请求，等子进程在片段边界收尾退出（默认不硬杀）
-RECORDING_STOP_GRACE_TIMEOUT = 120  # 秒；ffmpeg 段内会 terminate 当前段以尽快结束
+RECORDING_STOP_GRACE_TIMEOUT = 30  # 秒；超时仅提示，不硬杀，托盘保持运行
 
 # pystray 图标引用：供 Ctrl+C 强制退出时 stop 托盘循环
 tray_icon: pystray.Icon | None = None
@@ -356,9 +358,24 @@ def _force_shutdown_children() -> None:
         logger.debug(f"lifecycle cleanup: {e}")
 
 
-def _cooperative_stop_worker(proc: Popen, icon: pystray.Icon | None) -> None:
+def _graceful_exit_after_stop(icon: pystray.Icon | None) -> None:
+    """录制已优雅停止后，退出托盘进程。"""
+    if icon is not None:
+        try:
+            icon.stop()
+        except Exception as e:
+            logger.debug(f"icon.stop: {e}")
+    try:
+        if os.path.exists(config.tray_lock_path):
+            os.remove(config.tray_lock_path)
+    except OSError:
+        pass
+    os._exit(0)
+
+
+def _cooperative_stop_worker(proc: Popen, icon: pystray.Icon | None, exit_after: bool = False) -> None:
     """后台等待协作停录结束；禁止在 pystray 回调里同步 wait。"""
-    global recording_process, recording_stopping
+    global recording_process, recording_stopping, tray_exiting
 
     try:
         proc.wait(RECORDING_STOP_GRACE_TIMEOUT)
@@ -370,22 +387,34 @@ def _cooperative_stop_worker(proc: Popen, icon: pystray.Icon | None) -> None:
                 icon.icon = get_tray_icon(state="record_pause")
                 icon.title = _t("tray_tip_record_pause")
                 # 第二次 Toast：结果通知
-                icon.notify(message="录制已停止", title=_t("tray_notify_title_record_pause"))
+                if exit_after:
+                    icon.notify(message="录制已停止，正在退出……", title=_t("tray_notify_title_record_pause"))
+                else:
+                    icon.notify(message="录制已停止", title=_t("tray_notify_title_record_pause"))
             except Exception as e:
                 logger.debug(f"tray update after stop: {e}")
         logger.info("cooperative stop: recording process exited")
+        if exit_after:
+            _graceful_exit_after_stop(icon)
     except subprocess.TimeoutExpired:
         if icon is not None:
             try:
-                icon.notify(
-                    message="尝试停止超时，录制可能仍在保存中……未强制结束，以免损坏当前片段。",
-                    title="停止录制超时",
-                )
+                if exit_after:
+                    icon.notify(
+                        message="停止录制超时，仍在保存中……请稍后重试退出。",
+                        title="退出等待超时",
+                    )
+                else:
+                    icon.notify(
+                        message="尝试停止超时，录制可能仍在保存中……未强制结束，以免损坏当前片段。",
+                        title="停止录制超时",
+                    )
             except Exception as e:
                 logger.debug(f"tray timeout notify: {e}")
         logger.warning("cooperative stop: wait timed out, process may still be saving")
     finally:
         recording_stopping = False
+        tray_exiting = False
         if icon is not None:
             try:
                 icon.update_menu()
@@ -393,7 +422,7 @@ def _cooperative_stop_worker(proc: Popen, icon: pystray.Icon | None) -> None:
                 pass
 
 
-def _begin_cooperative_stop(icon: pystray.Icon | None) -> None:
+def _begin_cooperative_stop(icon: pystray.Icon | None, exit_after: bool = False) -> None:
     """在托盘回调里只发 stop 请求并启动后台 wait（立即返回）。"""
     global recording_process, recording_stopping
     from windrecorder.recording_lifecycle import request_stop
@@ -409,7 +438,10 @@ def _begin_cooperative_stop(icon: pystray.Icon | None) -> None:
         recording_stopping = True
 
     if icon is not None:
-        icon.notify(message="正在尝试停止录制……", title="正在尝试暂停录制")
+        if exit_after:
+            icon.notify(message="正在停止录制并准备退出……", title="正在退出")
+        else:
+            icon.notify(message="正在尝试停止录制……", title="正在尝试暂停录制")
 
     request_stop(source="tray")
     try:
@@ -419,7 +451,7 @@ def _begin_cooperative_stop(icon: pystray.Icon | None) -> None:
 
     threading.Thread(
         target=_cooperative_stop_worker,
-        args=(proc, icon),
+        args=(proc, icon, exit_after),
         daemon=True,
         name="cooperative-stop-recording",
     ).start()
@@ -523,28 +555,47 @@ def menu_callback():
             open_web_changelog,
             visible=lambda item: new_version is not None,
         ),
-        # 退出选项
-        pystray.MenuItem(_t("tray_exit"), on_exit),
+        # 退出选项（优雅退出：等录制收尾，禁用防连点）
+        pystray.MenuItem(
+            lambda item: "⏳ 正在退出…" if tray_exiting else _t("tray_exit"),
+            on_exit,
+            enabled=lambda item: not tray_exiting,
+        ),
     )
 
 
-# 处理退出操作（强制：与 Ctrl+C 相同）
+# 处理退出操作（优雅：等录制协作收尾后再退出托盘）
 def on_exit(icon: pystray.Icon, item: pystray.MenuItem):
-    global tray_icon
+    global tray_icon, tray_exiting, webui_process, webui_local_url, webui_ready, webui_starting, _webui_launch_id
     tray_icon = icon
-    logger.info("tray exit: force shutdown children")
-    _force_shutdown_children()
-    try:
-        icon.stop()
-    except Exception as e:
-        logger.debug(f"icon.stop: {e}")
-    try:
-        if os.path.exists(config.tray_lock_path):
-            os.remove(config.tray_lock_path)
-    except OSError:
-        pass
-    # 托盘退出也立刻结束进程，避免 pystray 卡在 run
-    os._exit(0)
+    tray_exiting = True
+    logger.info("tray exit: graceful shutdown")
+
+    # 1) 停 WebUI（无状态，可硬杀）
+    with _webui_lock:
+        _webui_launch_id += 1
+        proc = webui_process
+        webui_process = None
+        webui_local_url = ""
+        webui_ready = False
+        webui_starting = False
+    _stop_webui(proc)
+
+    # 2) 有录制：发协作停录请求，等录制收尾后由后台线程退出托盘
+    with _recording_lock:
+        has_recording = recording_process is not None
+
+    if has_recording:
+        try:
+            icon.icon = get_tray_icon(state="record_pause")
+            icon.title = "正在停止并退出…"
+        except Exception as e:
+            logger.debug(f"tray exit icon update: {e}")
+        _begin_cooperative_stop(icon, exit_after=True)
+        return
+
+    # 3) 无录制：直接退出
+    _graceful_exit_after_stop(icon)
 
 
 def interrupt_start():
