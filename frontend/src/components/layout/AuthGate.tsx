@@ -61,8 +61,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
       <div className="flex min-h-svh items-center justify-center bg-background p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">🔒 Password</CardTitle>
-            <CardDescription>{t("set_pwd_help")}</CardDescription>
+            <CardTitle className="flex items-center gap-2">{t("webui_login_title")}</CardTitle>
+            <CardDescription>{t("webui_login_help")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
             {error ? (
@@ -75,14 +75,14 @@ export function AuthGate({ children }: { children: ReactNode }) {
               type="password"
               autoFocus
               value={password}
-              placeholder="Password"
+              placeholder={t("webui_login_placeholder")}
               onChange={(e) => setPassword(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter") void login()
               }}
             />
             <Button className="w-full" onClick={() => void login()} disabled={submitting || !password}>
-              {submitting ? "..." : "Login"}
+              {submitting ? "..." : t("webui_login_btn")}
             </Button>
           </CardContent>
         </Card>
