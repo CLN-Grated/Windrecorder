@@ -103,7 +103,7 @@ export default function SettingPage() {
     null,
   )
   const [password, setPassword] = useState("")
-  const [removePassword, setRemovePassword] = useState(false)
+  const [removingPassword, setRemovingPassword] = useState(false)
   const [webuiPortText, setWebuiPortText] = useState("")
   const [webuiPortError, setWebuiPortError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -230,10 +230,8 @@ export default function SettingPage() {
         .split(/[,，\n]/)
         .map((s) => s.trim())
         .filter((s) => s.length > 0)
-      // Password: only send when setting a new one or explicitly removing (default is off / keep)
-      if (removePassword) {
-        payload.webui_access_password = ""
-      } else if (password) {
+      // Password: blank keeps the existing password; removal is handled by its own button.
+      if (password) {
         payload.webui_access_password = password
       }
       const res = await api.settingSave(payload)
@@ -243,13 +241,29 @@ export default function SettingPage() {
           : `${t("utils_toast_setting_saved")} (${res.applied.join(", ")})`,
       )
       setPassword("")
-      setRemovePassword(false)
       await load()
       await refresh()
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
       setSaving(false)
+    }
+  }
+
+  const removeWebuiPassword = async () => {
+    setRemovingPassword(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await api.settingSave({ webui_access_password: "" })
+      setPassword("")
+      setSettings((current) => (current ? { ...current, webui_password_enabled: false } : current))
+      setMessage(t("webui_pwd_removed"))
+      await refresh()
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setRemovingPassword(false)
     }
   }
 
@@ -799,24 +813,22 @@ export default function SettingPage() {
               className="mt-1"
               autoComplete="new-password"
               value={password}
-              disabled={removePassword}
               placeholder={t("webui_pwd_placeholder")}
               onChange={(e) => setPassword(e.target.value)}
             />
           </label>
-          <label className="flex items-center gap-2 text-sm">
-            <Checkbox
-              checked={removePassword}
-              onCheckedChange={(checked) => {
-                const on = checked === true
-                setRemovePassword(on)
-                if (on) setPassword("")
-              }}
-            />
-            {t("webui_pwd_remove")}
-          </label>
-          <p className="text-xs text-muted-foreground">{t("webui_pwd_clear_hint")}</p>
-          <p className="text-xs text-muted-foreground">{t("set_pwd_help")}</p>
+          {settings.webui_password_enabled ? (
+            <div>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={removingPassword || saving}
+                onClick={() => void removeWebuiPassword()}
+              >
+                {removingPassword ? "..." : t("webui_pwd_remove")}
+              </Button>
+            </div>
+          ) : null}
         </CardContent>
       </Card>
 
