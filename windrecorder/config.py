@@ -132,8 +132,6 @@ class Config:
         enable_ai_day_poem,
         ai_extract_tag_filter_words,
         enable_month_lightbox_watermark,
-        custom_background_filepath,
-        custom_background_opacity,
         convert_screenshots_to_vid_energy_saving_mode,
         enable_ocr_str_highlight_indicator,
         recycle_deleted_files,
@@ -246,8 +244,6 @@ class Config:
         self.enable_ai_day_poem = enable_ai_day_poem
         self.ai_extract_tag_filter_words = ai_extract_tag_filter_words
         self.enable_month_lightbox_watermark = enable_month_lightbox_watermark
-        self.custom_background_filepath = custom_background_filepath
-        self.custom_background_opacity = custom_background_opacity
         self.convert_screenshots_to_vid_energy_saving_mode = (
             convert_screenshots_to_vid_energy_saving_mode  # 0: instant, 1: plug-in, 2: idle
         )

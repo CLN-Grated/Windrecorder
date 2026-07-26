@@ -8,9 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Agent pitfalls / 易错约定（Windrecorder）
 
-本仓库多进程 + 双轨 WebUI，下列约定避免反复踩坑：
+本仓库多进程 + FastAPI/React WebUI，下列约定避免反复踩坑：
 
-### 新 WebUI：改 `frontend/src` 必须构建
+### WebUI：改 `frontend/src` 必须构建
 
 - 生产由 `api_server` 提供 **`frontend/dist`**（gitignore，**不进 git**）。
 - 改 React/TS 后必须：`cd frontend && pnpm install && pnpm run build`。
@@ -41,9 +41,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### 托盘启动路径：控制导入成本
 
-- `main.py` **不要**顶层 `import streamlit`（Streamlit 为 optional extra `legacy-webui`）。
 - 勿在托盘热路径顶层拉重 UI 库；弹窗类依赖应懒加载。
-- Streamlit 仅用于 `webui.py` / `windrecorder/ui/*` / extension；共享模块对 `st` 用函数内懒加载。
+- legacy Streamlit WebUI 已整体移除；共享模块（`llm.py` / `record_wintitle.py` 等）不得引入 `streamlit`。
 
 ### 前端门禁 UI 与轮询
 
@@ -89,7 +88,7 @@ Co-Authored-By: Claude Code <noreply@anthropic.com>
 
 ## Project overview
 
-Windrecorder is a **Windows-only**, fully-local personal memory search engine (Rewind.ai / Copilot Recall alternative). It continuously captures the screen, indexes OCR text / window titles / optional image embeddings into local databases, and provides a web UI for rewind, search, and activity stats. **WebUI is dual-track**: legacy Streamlit (`webui.py`) and next-gen **FastAPI + React/shadcn** (`api_server.py` + `frontend/`). No cloud required for core features; optional OpenAI-compatible LLM endpoints power tag extraction, day poems, and the natural-language search extension.
+Windrecorder is a **Windows-only**, fully-local personal memory search engine (Rewind.ai / Copilot Recall alternative). It continuously captures the screen, indexes OCR text / window titles / optional image embeddings into local databases, and provides a web UI for rewind, search, and activity stats. The WebUI is **FastAPI + React/shadcn** (`api_server.py` + `frontend/`); the legacy Streamlit WebUI has been removed. No cloud required for core features; optional OpenAI-compatible LLM endpoints power tag extraction and day poems.
 
 - License: GPL-2.0
 - Version: `windrecorder/__init__.py` (`__version__`)
@@ -167,9 +166,8 @@ start_app.bat
 - `main.py` owns tray lifecycle, starts/stops FastAPI WebUI and recording processes, and uses `FileLock` on `config.tray_lock_path` to prevent double-start. WebUI starts on the configured `webui_port` (default `54100`); a background worker confirms `/api/health` before exposing the address or opening the browser.
 - **Pause recording** is cooperative (`recording_lifecycle` stop request + segment boundary). **Tray exit / Ctrl+C** force-kills children (`taskkill /T /F`) and clears locks.
 - `record_screen.py` holds `config.record_lock_path`, runs capture + idle-maintenance threads, restarts crashed workers, and honors cooperative stop.
-- `webui.py` is a thin Streamlit shell: tabs call `windrecorder.ui.*.render()` (optional extra `legacy-webui`).
 - `api_server.py` / `windrecorder/api/` is the FastAPI layer reusing `oneday`, `db_manager`, etc.; SPA static files from `frontend/dist`.
-- `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui. Copy for new WebUI often lives in `frontend/src/lib/zh-messages.ts`.
+- `frontend/` is Vite + React + TS + Tailwind v4 + shadcn/ui. All UI copy comes from `windrecorder/config_src/languages.json`（`frontend/src/lib/zh-messages.ts` 仅为 import 转发壳）。
 
 Do not assume a single process; state shared between tray/recorder/webui is files + SQLite + locks under `cache/locks/` (including `recording_status.json` / `RECORD_STOP_REQUESTED`).
 
@@ -189,11 +187,10 @@ Do not assume a single process; state shared between tray/recorder/webui is file
 | `oneday.py` / `state.py` / `wordcloud.py` | Day timeline, stats/lightbox, wordcloud. |
 | `utils.py` | i18n (`get_text` as `_t`), time/path/display helpers, ffmpeg checks, `kill_recording`. |
 | `lock.py` / `logger.py` / `file_utils.py` | Cross-process locks, logging, filesystem helpers. |
-| `ui/` | Streamlit tabs: `oneday`, `search`, `state`, `lab`, `recording`, `setting`, shared `components`. |
 | `api/` | FastAPI app (`app.py`), Oneday/recording/setting services; media + SPA hosting. |
 | `upgrade_migration_routine.py` | One-shot migrations on upgrade / onboard. |
 
-Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `record_screen.py`, `onboard_setting.py`. Frontend app: `frontend/` (pnpm).
+Root scripts outside the package: `main.py`, `api_server.py`, `record_screen.py`, `onboard_setting.py`. Frontend app: `frontend/` (pnpm).
 
 ### Data flow
 
@@ -202,7 +199,7 @@ Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `recor
    - `ffmpeg`: 15-minute (default `record_seconds=900`) video segments; OCR indexing after segment completes → query lag ~segment length.
 2. **Index**: frames → `ocr_image()` → rows in monthly SQLite (`DATAFRAME_COLUMN_NAMES` in `const.py`: `videofile_name`, `ocr_text`, `win_title`, `thumbnail`, `deep_linking`, …).
 3. **Idle maintain** (screen static / lock screen / no user): OCR backlog, video compress/delete, optional image embedding batch, optional LLM day tags.
-4. **Query**: WebUI OCR keyword search (`db_manager.db_search_data`), optional vector search (`img_embed_manager`), optional LLM natural-language extension.
+4. **Query**: WebUI OCR keyword search (`db_manager.db_search_data`), optional vector search (`img_embed_manager`).
 
 ### Important runtime directories (mostly gitignored)
 
@@ -215,7 +212,7 @@ Root scripts outside the package: `main.py`, `webui.py`, `api_server.py`, `recor
 | `cache/` | locks, logs, i_frames, win_title, screenshot convert cache |
 | `cache_screenshot/` | Live screenshot capture cache |
 | `result_*` | Generated wordcloud / timeline / lightbox / AI tags / poems |
-| `extension/` | Optional plugins (OCR engines, img embed, LLM search, …) |
+| `extension/` | Optional plugins (OCR engines, img embed, …) |
 | `ocr_lib/` | Vendored ChineseOCR_lite_onnx (do not format/lint) |
 
 Moving the install: delete `.venv`, relocate folder (keep `userdata` + data dirs), re-run `install_update.bat`.
@@ -225,9 +222,8 @@ Moving the install: delete `.venv`, relocate folder (keep `userdata` + data dirs
 - Defaults: `windrecorder/config_src/config_default.json`
 - User file created/merged at runtime: `userdata/config_user.json`
 - On upgrade, `update_config_files_from_default_to_user()` adds new keys and drops removed ones.
-- i18n: Streamlit / tray often use `windrecorder/config_src/languages.json` via `_t("key")` (product is Chinese-first). New WebUI also uses `frontend/src/lib/zh-messages.ts`.
+- i18n: `windrecorder/config_src/languages.json` 是前后端唯一文案源；后端经 `_t("key")` 读取，前端经 `zh-messages.ts` 直接 import（product is Chinese-first）。改文案后需重新 `pnpm run build`。
 - Record/compress FFmpeg presets: `record_preset.json`, `video_compress_preset.json`.
-- Core Python deps do **not** require Streamlit; optional extra: `uv sync --locked --extra legacy-webui`.
 
 Key config fields agents touch often: `record_mode`, `ocr_engine`, `support_ocr_lst`, `OCR_index_strategy`, `enable_img_embed_search`, `img_embed_module_install`, `open_ai_*`, `exclude_words`, `multi_display_record_strategy`, `webui_port`, `webui_auto_open_browser`.
 
@@ -245,11 +241,9 @@ Third-party OCR contribution steps are documented in `extension/how_to_contribut
 Each folder under `extension/` typically has:
 
 - `meta.json` (`extension_name`, `developer_*`, `version`, `description_markdown`)
-- A `.bat` that uses `uv run --locked` to execute a Python/Streamlit entry from repo root
-- Optional `_test_install.py` / `_uninstall.py` / `_webui.py`
+- A `.bat` that uses `uv run --locked` to execute a Python entry from repo root
+- Optional `_test_install.py` / `_uninstall.py`
 - Optional extras in `pyproject.toml`: `paddle-ocr` (`rapidocr-onnxruntime`), `wechat-ocr` (`wechat-ocr`), and `img-embedding` (`uform`). Install with `uv sync --locked --inexact --extra <name>`.
-
-Example: `extension/LLM_search_and_summary/` — natural language search/summary via `llm` + `db_manager` (`_natural_search.py`).
 
 Image embedding module is **not** a core dependency; install via `extension/install_img_embedding_module/`. Always guard imports:
 
@@ -272,7 +266,7 @@ if config.img_embed_module_install:
 - **Line length 127**, Black + isort (black profile); flake8 ignores `E501,E203,W503`.
 - **Never reformat or commit binary/vendored trees**: `ocr_lib/`, user `userdata/`, `wxocr-binary/`, etc.
 - Prefer existing helpers in `file_utils`, `utils`, `db_manager`, `recording_lifecycle` over new ad-hoc path/SQL/status logic.
-- User-facing strings: Streamlit/tray via `_t("key")` + `languages.json`; new WebUI often via `zh-messages.ts`. Keep languages consistent when adding copy.
+- User-facing strings: 全部维护于 `languages.json`（后端 `_t("key")`，前端经 `zh-messages.ts` import 同一文件）。新增文案只改 JSON。
 - Cross-process exclusivity: use `FileLock` from `windrecorder.lock` (same pattern as tray/record/img_emb locks). Recording busy/clear gates should reuse `recording_lifecycle.get_public_status()` where possible.
 - DB schema evolution: extend via `db_manager.db_ensure_row_exist` / `db_update_table_product_routine`, not one-off ALTER scripts users must run.
 - Comments and many log messages are bilingual or Chinese-first; match surrounding file language rather than rewriting wholesale.
