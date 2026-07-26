@@ -124,6 +124,10 @@
   * {
     @apply border-border outline-ring/50;
     }
+  /* shadcn/ui Neutral 默认选中：亮色深灰底+浅字，暗色浅灰底+深字 */
+  ::selection {
+    @apply bg-primary text-primary-foreground;
+    }
   body {
     @apply bg-background text-foreground;
     }
