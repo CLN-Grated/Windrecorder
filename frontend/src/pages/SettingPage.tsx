@@ -29,6 +29,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 
 type ClearScopeInfo = {
   id: string
@@ -235,11 +236,7 @@ export default function SettingPage() {
         payload.webui_access_password = password
       }
       const res = await api.settingSave(payload)
-      setMessage(
-        res.webui_restart_required
-          ? t("webui_restart_required")
-          : `${t("utils_toast_setting_saved")} (${res.applied.join(", ")})`,
-      )
+      setMessage(res.webui_restart_required ? t("webui_restart_required") : t("utils_toast_setting_saved"))
       setPassword("")
       await load()
       await refresh()
@@ -455,6 +452,7 @@ export default function SettingPage() {
                   }
                 }}
               >
+                {updatingDb || dbStatus?.update_job?.running ? <Spinner /> : null}
                 {updatingDb || dbStatus?.update_job?.running
                   ? t("set_text_updating_db", { estimate_time_str: dbStatus?.estimate_indexing_time || "..." })
                   : t("set_btn_update_db_manual")}
@@ -825,7 +823,8 @@ export default function SettingPage() {
                 disabled={removingPassword || saving}
                 onClick={() => void removeWebuiPassword()}
               >
-                {removingPassword ? "..." : t("webui_pwd_remove")}
+                {removingPassword ? <Spinner /> : null}
+                {t("webui_pwd_remove")}
               </Button>
             </div>
           ) : null}
@@ -864,7 +863,8 @@ export default function SettingPage() {
 
       <Separator />
       <Button onClick={() => void save()} disabled={saving}>
-        {saving ? "..." : t("text_apply_changes")}
+        {saving ? <Spinner /> : null}
+        {t("text_apply_changes")}
       </Button>
 
       <Dialog
@@ -1056,7 +1056,8 @@ export default function SettingPage() {
                   disabled={!clearAck || clearExecuting}
                   onClick={() => void executeClear()}
                 >
-                  {clearExecuting ? "..." : t("webui_clear_execute")}
+                  {clearExecuting ? <Spinner /> : null}
+                  {t("webui_clear_execute")}
                 </Button>
               </DialogFooter>
             </>

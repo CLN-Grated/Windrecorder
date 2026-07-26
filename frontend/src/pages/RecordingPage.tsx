@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
 type Settings = {
@@ -104,8 +105,8 @@ export default function RecordingPage() {
           .map((s) => s.trim())
           .filter((s) => s.length >= 2),
       }
-      const res = await api.recordingSave(payload)
-      setMessage(`${t("utils_toast_setting_saved")} (${res.applied.length})`)
+      await api.recordingSave(payload)
+      setMessage(t("utils_toast_setting_saved"))
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -603,6 +604,7 @@ export default function RecordingPage() {
               disabled={benchRunning}
               onClick={() => void runBenchmark("record")}
             >
+              {benchRunning && benchKind === "record" ? <Spinner /> : null}
               {benchRunning && benchKind === "record"
                 ? t("rs_text_encode_benchmark_loading")
                 : t("rs_btn_encode_benchmark")}
@@ -614,6 +616,7 @@ export default function RecordingPage() {
               disabled={benchRunning}
               onClick={() => void runBenchmark("compress")}
             >
+              {benchRunning && benchKind === "compress" ? <Spinner /> : null}
               {benchRunning && benchKind === "compress"
                 ? t("rs_text_encode_benchmark_loading")
                 : t("rs_btn_encode_benchmark")}
@@ -649,7 +652,8 @@ export default function RecordingPage() {
 
       <Separator />
       <Button type="button" onClick={() => void save()} disabled={saving}>
-        {saving ? "..." : t("text_apply_changes")}
+        {saving ? <Spinner /> : null}
+        {t("text_apply_changes")}
       </Button>
     </div>
   )

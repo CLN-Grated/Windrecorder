@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Slider } from "@/components/ui/slider"
+import { Spinner } from "@/components/ui/spinner"
 
 type Mode = "ocr_month" | "ocr_exact"
 
@@ -187,6 +188,7 @@ export default function SearchPage() {
 
           <div className="flex flex-wrap items-center gap-2">
             <Button onClick={() => void runSearch(1)} disabled={loading}>
+              {loading ? <Spinner /> : null}
               {loading ? t("gs_text_searching") : t("text_search_keyword")}
             </Button>
             {result ? (

@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 
 type MonthPoint = { day: number; hours: number; data_count: number }
 type YearPoint = { month: number; day: number; data_count: number }
@@ -200,7 +201,7 @@ export default function StatePage() {
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-3">
               <Button onClick={() => void genLightbox()} disabled={busy === "lightbox"}>
-                <ImageIcon className="size-4" />
+                {busy === "lightbox" ? <Spinner /> : <ImageIcon className="size-4" />}
                 {busy === "lightbox"
                   ? lightboxHd
                     ? t("stat_text_generating_lightbox_hd")
@@ -233,6 +234,7 @@ export default function StatePage() {
           </div>
           <div className="space-y-2">
             <Button onClick={() => void genWordcloud()} disabled={busy === "wordcloud"}>
+              {busy === "wordcloud" ? <Spinner /> : null}
               {busy === "wordcloud" ? t("stat_text_generating_word_cloud") : t("stat_btn_generate_update_word_cloud")}
             </Button>
             {wordcloudUrl ? (

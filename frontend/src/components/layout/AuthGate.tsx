@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
+import { Spinner } from "@/components/ui/spinner"
 
 export function AuthGate({ children }: { children: ReactNode }) {
   const t = useT()
@@ -82,7 +83,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
               }}
             />
             <Button className="w-full" onClick={() => void login()} disabled={submitting || !password}>
-              {submitting ? "..." : t("webui_login_btn")}
+              {submitting ? <Spinner /> : null}
+              {t("webui_login_btn")}
             </Button>
           </CardContent>
         </Card>
