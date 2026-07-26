@@ -628,14 +628,6 @@ def get_os_support_lang():
 with open(os.path.join(config.config_src_dir, "languages.json"), encoding="utf-8") as f:
     _zh_messages = json.load(f)
 
-# 兼容仍读取 d_lang[lang] / lang_map 的 legacy Streamlit 代码；内容均为中文
-d_lang = {
-    "sc": _zh_messages,
-    "en": _zh_messages,
-    "ja": _zh_messages,
-    "lang_map": {"sc": "简体中文"},
-}
-
 
 def get_text(text_key):
     """返回中文文案；产品已取消多语言 i18n。"""

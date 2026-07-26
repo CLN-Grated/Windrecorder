@@ -1,4 +1,3 @@
-import calendar
 import datetime
 import os
 
@@ -17,7 +16,6 @@ from windrecorder.const import (
     LLM_TEMPERATURE_EXTRACT_DAY_TAGS,
 )
 from windrecorder.logger import get_logger
-from windrecorder.utils import get_text as _t
 
 logger = get_logger(__name__)
 
@@ -121,24 +119,6 @@ def get_cache_data_by_date(date_in: datetime.date, cache_dir=config.ai_extract_t
     return cache_data
 
 
-def get_day_or_month_tags(date_in: datetime.date, type="day"):
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    if type == "day":
-        dt_str = utils.datetime_to_dateDayStr(date_in)
-    elif type == "month":
-        dt_str = utils.datetime_to_dateDayStr(date_in)[:7]
-    else:
-        return False, ["bad_args"]
-
-    if "day_tags_data" not in st.session_state:
-        st.session_state["day_tags_data"] = get_cache_data_by_date(date_in, cache_dir=config.ai_extract_tag_result_dir_ud)
-
-    if dt_str in st.session_state["day_tags_data"].keys():
-        return True, st.session_state["day_tags_data"][dt_str]
-    return False, []
-
-
 def generate_and_save_day_or_month_tags(date_in: datetime.date, type="day"):
     if type == "day":
         dt_str = utils.datetime_to_dateDayStr(date_in)
@@ -178,61 +158,6 @@ def generate_and_save_day_or_month_tags(date_in: datetime.date, type="day"):
             except Exception as e:
                 logger.warning(f"caching retry fail: {e}")
         return False, [], plain_text
-
-
-def component_day_or_month_tags(date_in: datetime.date, type="day"):
-    # 渲染每日或每月标签
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    def _render_tags(tags_lst):
-        html_tags_lst = []
-        for tag in tags_lst:
-            html_tags_lst.append(f"<span class='tag'>{tag}</span>")
-        html_tags = "".join(map(str, html_tags_lst))
-        html_full = (
-            """
-    <style>
-.tags-container {
-width: 100%;
-text-align: left;
-margin-bottom: 16px;
-
-}
-
-.tag {
-display: inline-block;
-padding: 6px 12px;
-margin: 4px 2px;
-background-color: #F6F2EF;
-border-radius: 30px;
-font-size: 14px;
-mix-blend-mode: multiply;
-}
-    </style>
-
-<div class="tags-container">
-"""
-            + html_tags
-            + """
-</div>
-    """
-        )
-        st.markdown(html_full, unsafe_allow_html=True)
-
-    day_tags_cache_exist, day_tags_lst = get_day_or_month_tags(date_in, type=type)
-    if day_tags_cache_exist:
-        if type == "day":
-            component_day_poem(date_in)
-        _render_tags(day_tags_lst)
-    else:
-        if st.button(label="✨ " + _t("lab_btn_generate_tags"), key=_t("lab_btn_generate_tags") + str(date_in)):
-            with st.spinner(_t("lab_text_generating_tags")):
-                success, day_tags_lst, plain_text = generate_and_save_day_or_month_tags(date_in, type=type)
-                if success:
-                    del st.session_state["day_tags_data"]
-                    st.rerun()
-                else:
-                    st.warning(_t("lab_text_generating_tags_fail").format(plain_text=plain_text), icon="😥")
 
 
 def cache_day_tags_in_idle_routine(batch_count=config.ai_extract_tag_in_idle_batch_size):
@@ -317,55 +242,6 @@ def generate_day_poem_by_tag_lst(date_in: datetime.date, tags_lst: list):
         return False, "", poem_plain_text
 
 
-def get_day_poem(date_in: datetime.date, force_read=False):
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    dt_str = utils.datetime_to_dateDayStr(date_in)
-    if "day_poem_data" not in st.session_state or force_read:
-        st.session_state["day_poem_data"] = get_cache_data_by_date(date_in, cache_dir=config.ai_day_poem_result_dir_ud)
-
-    if dt_str in st.session_state["day_poem_data"].keys():
-        return True, st.session_state["day_poem_data"][dt_str]
-    return False, ""
-
-
-def get_month_poem(date_in: datetime.date, force_read=False):
-    _, num_days = calendar.monthrange(date_in.year, date_in.month)
-    data_lst = []
-
-    for day in range(1, num_days + 1):
-        current_date = datetime.date(date_in.year, date_in.month, day)
-        day_poem_cache_exist, day_poem = get_day_poem(current_date, force_read=force_read)
-        data_lst.append(
-            {
-                "date": current_date,
-                "poem": day_poem,
-            }
-        )
-    return data_lst
-
-
-def generate_month_poem(date_in: datetime.date):
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    progress_text = _t("stat_text_generating_ai_poem")
-    progress_bar = st.progress(0.0, text=progress_text)
-
-    if date_in.month == datetime.date.today().month and date_in.year == datetime.date.today().year:
-        num_days = datetime.date.today().day
-    else:
-        _, num_days = calendar.monthrange(date_in.year, date_in.month)
-        num_days += 1
-
-    for day in range(1, num_days):
-        current_date = datetime.date(date_in.year, date_in.month, day)
-        day_poem_cache_exist, day_poem = get_day_poem(current_date)
-        if not day_poem_cache_exist:
-            generate_and_save_day_poem(current_date)
-        progress_bar.progress(day / num_days, text=progress_text)
-    progress_bar.empty()
-
-
 def generate_and_save_day_poem(date_in: datetime.date):
     dt_str = utils.datetime_to_dateDayStr(date_in)
     cache_path_poem = os.path.join(config.ai_day_poem_result_dir_ud, str(date_in.year) + ".json")
@@ -393,48 +269,3 @@ def generate_and_save_day_poem(date_in: datetime.date):
             except Exception as e:
                 logger.warning(f"caching retry fail: {e}")
         return False, "", plain_text
-
-
-def component_day_poem(date_in: datetime.date):
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    day_poem_cache_exist, day_poem = get_day_poem(date_in)
-    if day_poem_cache_exist:
-        st.caption(day_poem)
-
-
-def component_month_poem(month_dt: datetime.datetime):
-    # 如果切换了时间或第一次加载，进行更新
-    import streamlit as st  # lazy, legacy Streamlit UI only
-
-    update_condition = False
-
-    if "poem_month_dt_last_time" not in st.session_state:  # diff 当前显示表的日期，用于和控件用户输入对比判断是否更新
-        st.session_state.poem_month_dt_last_time = month_dt
-        update_condition = True
-
-    if utils.set_full_datetime_to_YYYY_MM(st.session_state.poem_month_dt_last_time) != utils.set_full_datetime_to_YYYY_MM(
-        month_dt
-    ):
-        update_condition = True
-        st.session_state.poem_month_dt_last_time = month_dt
-
-    if st.button(_t("stat_btn_generate_update_ai_poem")):
-        generate_month_poem(datetime.date(month_dt.year, month_dt.month, 1))
-        update_condition = True
-
-    if update_condition:
-        st.session_state.poem_month_df = pd.DataFrame(
-            get_month_poem(datetime.date(month_dt.year, month_dt.month, 1), force_read=True)
-        )
-
-    st.dataframe(
-        st.session_state.poem_month_df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "date": st.column_config.DateColumn(format="YYYY-MM-DD", width="small"),
-            "poem": st.column_config.TextColumn(width="large"),
-        },
-        height=500,
-    )

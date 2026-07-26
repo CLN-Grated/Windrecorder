@@ -7,8 +7,12 @@ import time
 from pathlib import Path
 from typing import Any
 
-from windrecorder import __version__, file_utils, record, utils
-from windrecorder.config import config, validate_webui_auto_open_browser, validate_webui_port
+from windrecorder import __version__, file_utils, utils
+from windrecorder.config import (
+    config,
+    validate_webui_auto_open_browser,
+    validate_webui_port,
+)
 from windrecorder.const import OCR_SUPPORT_CONFIG, SCREENSHOT_CACHE_FILEPATH
 from windrecorder.logger import get_logger
 
@@ -342,7 +346,6 @@ def get_options() -> dict[str, Any]:
         "os_support_lang": os_langs,
         "ocr_support": ocr_support,
         "db_status": get_db_status(),
-        "lang_map": {"sc": "简体中文"},
         "display_count": display_count,
         "display_info_formatted": display_info_formatted,
     }
@@ -365,8 +368,7 @@ def _validate_webui_settings(payload: dict[str, Any]) -> None:
 def save_settings(payload: dict[str, Any]) -> dict[str, Any]:
     _validate_webui_settings(payload)
     webui_restart_required = any(
-        key in payload and payload[key] != getattr(config, key)
-        for key in ("webui_port", "webui_auto_open_browser")
+        key in payload and payload[key] != getattr(config, key) for key in ("webui_port", "webui_auto_open_browser")
     )
     mapping = [
         "ocr_engine",
