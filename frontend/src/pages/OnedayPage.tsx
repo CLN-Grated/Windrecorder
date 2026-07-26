@@ -17,6 +17,7 @@ import { useI18n, useT } from "@/lib/i18n"
 import { highlightOcrText } from "@/lib/ocr-highlight"
 import { cn } from "@/lib/utils"
 import { I18nMarkdown } from "@/components/I18nMarkdown"
+import { MediaVideo } from "@/components/MediaVideo"
 import { PageHeader } from "@/components/layout/PageHeader"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
@@ -392,14 +393,10 @@ export function OnedayPage() {
             {locateLoading && !locate ? <Skeleton className="aspect-video w-full" /> : null}
 
             {locate?.kind === "video" && locate.video_url ? (
-              <video
-                key={`${locate.video_url}-${locate.start_seconds ?? 0}`}
+              <MediaVideo
+                src={locate.video_url}
+                startSeconds={locate.start_seconds ?? 0}
                 className="aspect-video w-full rounded-lg bg-black object-contain"
-                src={`${locate.video_url}#t=${Math.max(0, locate.start_seconds ?? 0)}`}
-                controls
-                controlsList="nodownload"
-                preload="metadata"
-                playsInline
                 autoPlay
               />
             ) : null}
